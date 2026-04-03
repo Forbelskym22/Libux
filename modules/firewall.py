@@ -1,4 +1,5 @@
 from simple_term_menu import TerminalMenu
+import subprocess
 from modules import utils
 
 def run():
@@ -18,6 +19,13 @@ def run():
         # reaction to the choice
         if choice == 0:
             print("\nStarting an installation of iptables...")
+            subprocess.run(["sudo", "apt", "update"])
+            subprocess.run(["sudo","apt","install","iptables","-y"])
+            if utils.is_service_installed("iptables"):
+                print("\n[Success] iptables installed.")
+            else:
+                print("\n[error] Installation failed! Check logs or network connection.")
+
             input("\nPress Enter to continue...")
         elif choice == 1 or choice is None:
             return
