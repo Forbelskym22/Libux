@@ -64,18 +64,17 @@ def show_firewall_menu():
         os.system('clear') 
         utils.print_menu_name("Firewall Configuration (iptables)")
         
-        separator = " \033[2m" + "─" * 32 + "\033[0m"
         options = [
-            "[0] Default config (Wizard)",
-            "[1] INPUT Chain",
-            "[2] FORWARD Chain",
-            "[3] NAT / MANGLE",
-            separator,
-            "[S] Save",
-            "[X] Back"
+            "Default config (Wizard)",
+            "INPUT Chain",
+            "FORWARD Chain",
+            "NAT / MANGLE",
+            "",
+            "Save",
+            "Back"
         ]
-        
-        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=True)
+
+        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=True, skip_empty_entries=True)
         choice = menu.show()
 
         if choice == 0:
