@@ -1,3 +1,4 @@
+from simple_term_menu import TerminalMenu
 from modules import utils
 
 def run():
@@ -7,5 +8,17 @@ def run():
         print("\n[OK] iptables nalezeny. Spouštím konfiguraci...")
         input("Stiskni Enter pro návrat do hlavního menu...")
     else:
-        print("\n[CHYBA] Nástroj 'iptables' není na tomto systému nainstalovaný!")
-        input("Stiskni Enter pro návrat do hlavního menu...")
+        # List with options
+        options = ["Install iptables","Back to main menu"]
+        # Create object of the menu
+        menu = TerminalMenu(options,title="[!] iptables aren't installed.")
+        # Render the object
+        choice = menu.show()
+
+        # reaction to the choice
+        if choice == 0:
+            print("\nStarting an installation of iptables...")
+            input("\nPress Enter to continue...")
+        elif choice == 1 or choice is None:
+            return
+        
