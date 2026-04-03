@@ -3,30 +3,38 @@ import subprocess
 from modules import utils
 
 def run():
-    print("\n--- Spouštím konfiguraci Firewallu (iptables) ---")
-
+    utils.log("Spouštím konfiguraci Firewallu (iptables)", "info")
     if utils.is_service_installed("iptables"):
-        print("\n[OK] iptables nalezeny. Spouštím konfiguraci...")
-        input("Stiskni Enter pro návrat do hlavního menu...")
+        utils.log(" iptables nalezeny. Spouštím konfiguraci...", "info")
+        utils.log("Stiskni Enter pro návrat do hlavního menu...", "info")
+
     else:
         # List with options
         options = ["Install iptables","Back to main menu"]
         # Create object of the menu
-        menu = TerminalMenu(options,title="[!] iptables aren't installed.")
+
+        utils.print_menu_name("Firewall isn't installed.")
+        menu = TerminalMenu(options)
         # Render the object
         choice = menu.show()
 
         # reaction to the choice
         if choice == 0:
-            print("\nStarting an installation of iptables...")
+            utils.log("Starting an installation of iptables...", "info")
+
+
+            # run commands in terminal
             subprocess.run(["sudo", "apt", "update"])
             subprocess.run(["sudo","apt","install","iptables","-y"])
-            if utils.is_service_installed("iptables"):
-                print("\n[Success] iptables installed.")
-            else:
-                print("\n[error] Installation failed! Check logs or network connection.")
 
-            input("\nPress Enter to continue...")
+            
+
+            if utils.is_service_installed("iptables"):
+                utils.log("iptables installed.", "success")
+            else:
+                
+                utils.log("Installation failed! Check logs or network connection.", "error")
+            utils.log("Press Enter to continue...", "info")
         elif choice == 1 or choice is None:
             return
         

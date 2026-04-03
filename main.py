@@ -1,6 +1,7 @@
 import sys
 from simple_term_menu import TerminalMenu
 from modules import firewall
+from modules import utils
 
 def main():
     options = ["Firewall (iptables)", "Ukončit Libux"]
@@ -12,7 +13,7 @@ def main():
         if menu_entry_index == 0:
             firewall.run()
         elif menu_entry_index == 1 or menu_entry_index is None:
-            print("Ukončuji Libux...")
+            utils.log("Ukončuji Libux...", "info")
             sys.exit(0)
 
 if __name__ == "__main__":
