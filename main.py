@@ -1,13 +1,16 @@
 import sys
+import os
 from simple_term_menu import TerminalMenu
 from modules import firewall
 from modules import utils
 
 def main():
     options = ["Firewall (iptables)", "Ukončit Libux"]
-    terminal_menu = TerminalMenu(options, title="=== LIBUX Server Configurator ===")
     
     while True:
+        os.system('clear')
+        terminal_menu = TerminalMenu(options, cycle_cursor=True, clear_screen=True)
+
         menu_entry_index = terminal_menu.show()
         
         if menu_entry_index == 0:
