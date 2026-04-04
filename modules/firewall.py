@@ -11,17 +11,23 @@ def manage_input_chain():
         break
 
 def setup_secure_baseline():
-    os.system('clear') 
+    os.system('clear')
     utils.print_menu_name("Secure Baseline Wizard")
     utils.log("This will reset INPUT chain and set a secure 'DROP' policy.", "info")
 
     def get_ssh_port():
-        while True:  
-            choice = input(f"\n{utils.WHITE}Is your SSH running on port 22? (y/n): {utils.RESET}").lower()
+        while True:
+            try:
+                choice = input(f"\n{utils.WHITE}Is your SSH running on port 22? (y/n): {utils.RESET}").lower()
+            except KeyboardInterrupt:
+                return None
             if choice == "y":
                 return "22"
             elif choice == "n":
-                port = input(f"{utils.WHITE}Insert your SSH port: {utils.RESET}")
+                try:
+                    port = input(f"{utils.WHITE}Insert your SSH port: {utils.RESET}")
+                except KeyboardInterrupt:
+                    return None
                 if port.isdigit():
                     return port
                 utils.log("That's not a number!", "error")
@@ -29,12 +35,19 @@ def setup_secure_baseline():
                 utils.log("Invalid input, type 'y' or 'n'.", "error")
 
     ssh_port = get_ssh_port()
+    if ssh_port is None:
+        utils.log("Wizard cancelled.", "info")
+        return
 
-    confirm = input(f"\n{utils.RED}WARNING: This will flush existing INPUT rules! Proceed? (y/n): {utils.RESET}").lower()
-    
+    try:
+        confirm = input(f"\n{utils.RED}WARNING: This will flush existing INPUT rules! Proceed? (y/n): {utils.RESET}").lower()
+    except KeyboardInterrupt:
+        utils.log("Wizard cancelled.", "info")
+        return
+
     if confirm == 'y':
         utils.log("Applying core rules...", "info")
-        
+
         core_commands = [
             "sudo iptables -F INPUT",
             "sudo iptables -A INPUT -i lo -j ACCEPT",
@@ -42,22 +55,31 @@ def setup_secure_baseline():
             "sudo iptables -A INPUT -p udp --sport 53 -j ACCEPT",
             f"sudo iptables -A INPUT -p tcp --dport {ssh_port} -j ACCEPT"
         ]
-        
+
         for cmd in core_commands:
             subprocess.run(shlex.split(cmd))
 
-        if input(f"\n{utils.WHITE}Allow ICMP (Ping)? (y/n): {utils.RESET}").lower() == "y":
-            subprocess.run(shlex.split("sudo iptables -A INPUT -p icmp -j ACCEPT"))
-            utils.log("Ping allowed.", "success")
-        
+        try:
+            if input(f"\n{utils.WHITE}Allow ICMP (Ping)? (y/n): {utils.RESET}").lower() == "y":
+                subprocess.run(shlex.split("sudo iptables -A INPUT -p icmp -j ACCEPT"))
+                utils.log("Ping allowed.", "success")
+        except KeyboardInterrupt:
+            pass
+
         subprocess.run(shlex.split("sudo iptables -P INPUT DROP"))
         subprocess.run(shlex.split("sudo iptables -P FORWARD DROP"))
 
         utils.log("Baseline applied! Policy set to DROP.", "success")
-        input("\nPress Enter to return to menu...") 
+        try:
+            input("\nPress Enter to return to menu...")
+        except KeyboardInterrupt:
+            pass
     else:
         utils.log("Wizard cancelled.", "info")
-        input("\nPress Enter to return...")
+        try:
+            input("\nPress Enter to return...")
+        except KeyboardInterrupt:
+            pass
 
 def show_firewall_menu():
     while True:
@@ -70,12 +92,13 @@ def show_firewall_menu():
             "FORWARD Chain",
             "NAT / MANGLE",
             "",
+            "Show",
             "Save",
             "Back"
         ]
 
-        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=True, skip_empty_entries=True)
-        choice = menu.show()
+        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
+        choice = utils.show_menu(menu)
 
         if choice == 0:
             setup_secure_baseline()
@@ -83,10 +106,12 @@ def show_firewall_menu():
             manage_input_chain()
         elif choice == 4:
             continue
-        elif choice == 5: 
+        elif choice == 5:
+            continue
+        elif choice == 6: 
             utils.log("Save function here...", "info")
             input("\nPress Enter to continue...")
-        elif choice == 6 or choice is None:
+        elif choice == 7 or choice is None:
             break
 
 def show_firewall_installation_menu():
@@ -96,10 +121,10 @@ def show_firewall_installation_menu():
 
         # Create object of the menu
         utils.print_menu_name("Firewall isn't installed.")
-        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=True)
+        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, menu_cursor_style=utils.MENU_CURSOR_STYLE)
 
         # Render the object
-        choice = menu.show()
+        choice = utils.show_menu(menu)
 
         # reaction to the choice
         if choice == 0:

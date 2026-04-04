@@ -9,9 +9,9 @@ def main():
     
     while True:
         os.system('clear')
-        terminal_menu = TerminalMenu(options, cycle_cursor=True, clear_screen=True)
+        terminal_menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, menu_cursor_style=utils.MENU_CURSOR_STYLE)
 
-        menu_entry_index = terminal_menu.show()
+        menu_entry_index = utils.show_menu(terminal_menu)
         
         if menu_entry_index == 0:
             firewall.run()

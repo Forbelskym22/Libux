@@ -1,13 +1,17 @@
 import shutil
 
+# simple_term_menu cursor style (globally used)
+MENU_CURSOR_STYLE = ("fg_purple", "bold")
+
 #colors
 RED = "\033[91m"
 GREEN = "\033[92m"
-ORANGE = "\033[38;5;208m"
+PURPLE = "\033[38;5;135m"
 WHITE = "\033[97m"
 
+GRAY = "\033[38;5;240m"
 RESET = "\033[0m"
-PREFIX = f"{ORANGE}[Libux]{RESET}"
+PREFIX = f"{PURPLE}[Libux]{RESET}"
 
 def is_service_installed(service_name):
     """
@@ -28,9 +32,17 @@ def log(message,msg_type="info"):
         print(f"{PREFIX} {WHITE}{message}{RESET}")
 
 
+def show_menu(menu):
+    """
+    Wrapper around menu.show() that treats Ctrl+C as cancel (returns None).
+    """
+    try:
+        return menu.show()
+    except KeyboardInterrupt:
+        return None
+
 def print_menu_name(title):
     """
-    Print menu header with orange highlight 
+    Print menu header with purple highlight
     """
-    print(f"{ORANGE}---{RESET} {WHITE}{title}{RESET} {ORANGE}---{RESET}")
-
+    print(f"{PURPLE}---{RESET} {WHITE}{title}{RESET} {PURPLE}---{RESET} {GRAY}Ctrl+C (exit){RESET}")
