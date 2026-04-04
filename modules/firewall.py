@@ -4,6 +4,49 @@ from modules import utils
 import shlex
 import os
 
+def show_firewall():
+    os.system('clear')
+    utils.print_menu_name("Firewall rules")
+
+    word_colors = {
+        "INPUT": utils.PINK,
+        "FORWARD": utils.PINK,
+        "OUTPUT": utils.PINK,
+        "ACCEPT": utils.GREEN,
+        "DROP": utils.RED,
+        "REJECT": utils.RED,
+        "policy": utils.PURPLE,
+        "all": utils.GRAY,
+        "tcp": utils.WHITE,
+        "udp": utils.WHITE,
+        "icmp": utils.WHITE,
+        "lo": utils.YELLOW
+    }
+
+    result = subprocess.run(shlex.split("sudo iptables -L -v"), capture_output=True, text=True)
+    for line in result.stdout.splitlines():
+        if line.startswith("Chain"):
+            colored = " ".join(
+                f"{utils.GREEN}{w}{utils.RESET}" if w == "ACCEPT" else
+                f"{utils.RED}{w}{utils.RESET}" if w in ("DROP", "REJECT") else
+                f"{utils.PINK}{w}{utils.RESET}"
+                for w in line.split(" ")
+            )
+            print(colored)
+        else:
+            colored = " ".join(
+                f"{word_colors[w]}{w}{utils.RESET}" if w in word_colors else w
+                for w in line.split(" ")
+            )
+            print(colored)
+
+    try:
+        input("\nPress Enter to return to menu...")
+    except KeyboardInterrupt:
+        pass
+
+
+
 def manage_input_chain():
     while True:
         os.system('clear')
@@ -107,7 +150,7 @@ def show_firewall_menu():
         elif choice == 4:
             continue
         elif choice == 5:
-            continue
+            show_firewall()
         elif choice == 6: 
             utils.log("Save function here...", "info")
             input("\nPress Enter to continue...")
