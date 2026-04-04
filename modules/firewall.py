@@ -1,8 +1,13 @@
 from simple_term_menu import TerminalMenu
 import subprocess
-from modules import utils
 import shlex
 import os
+from modules import utils
+from modules.fw_shared import remove_rule
+from modules.fw_input import manage_input_chain
+from modules.fw_forward import manage_forward_chain
+from modules.fw_nat import manage_prerouting, manage_postrouting
+
 
 def show_firewall():
     os.system('clear')
@@ -45,261 +50,6 @@ def show_firewall():
     except KeyboardInterrupt:
         pass
 
-def ask(prompt):
-    try:
-        return input(f"{utils.WHITE}{prompt}{utils.GRAY} (Enter to skip): {utils.RESET}").strip()
-    except KeyboardInterrupt:
-        return None
-        
-def forward_allow_traffic():
-    os.system('clear')
-    utils.print_menu_name("Firewall > FORWARD Chain > Allow traffic")
-
-    
-
-    iface_in  = ask("From interface (e.g. eth0)")
-    if iface_in is None: return
-    iface_out = ask("To interface (e.g. eth1)")
-    if iface_out is None: return
-    src       = ask("Source IP/subnet (e.g. 192.168.1.0/24)")
-    if src is None: return
-    dst       = ask("Destination IP/subnet (e.g. 10.0.0.5)")
-    if dst is None: return
-    proto_menu = TerminalMenu(["tcp", "udp", "any"], cycle_cursor=True, clear_screen=False, menu_cursor_style=utils.MENU_CURSOR_STYLE)
-    proto_choice = utils.show_menu(proto_menu)
-    if proto_choice is None: return
-    proto = ["tcp", "udp", "any"][proto_choice]
-
-    port = ""
-    if proto in ("tcp", "udp"):
-        port = ask("Destination port")
-        if port is None: return
-
-    cmd = ["sudo", "iptables", "-A", "FORWARD"]
-    if iface_in:  cmd += ["-i", iface_in]
-    if iface_out: cmd += ["-o", iface_out]
-    if src:       cmd += ["-s", src]
-    if dst:       cmd += ["-d", dst]
-    if proto in ("tcp", "udp"):
-        cmd += ["-p", proto]
-        if port and port.isdigit():
-            cmd += ["--dport", port]
-    cmd += ["-j", "ACCEPT"]
-
-    subprocess.run(cmd)
-    utils.log("Forward rule added.", "success")
-
-def forward_allow_es_rel():
-    try:
-        permission = input(f"{utils.WHITE}Allow related/established{utils.GRAY} (y/n): {utils.RESET}").strip()
-    except KeyboardInterrupt:
-        return
-    if permission != "y":
-        return
-
-    iface_in  = ask("From interface (e.g. eth1 = LAN)")
-    if iface_in is None: return
-    iface_out = ask("To interface (e.g. eth0 = WAN)")
-    if iface_out is None: return
-
-    cmd = ["sudo", "iptables", "-A", "FORWARD"]
-    if iface_in:  cmd += ["-i", iface_in]
-    if iface_out: cmd += ["-o", iface_out]
-    cmd += ["-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"]
-
-    subprocess.run(cmd)
-    utils.log("Established/related traffic allowed on FORWARD.", "success")
-
-def forward_add_rule():
-    while True:
-        os.system('clear')
-        utils.print_menu_name("Firewall > FORWARD Chain > Add rule")
-
-        options = [
-            "Allow traffic",
-            "Allow established/related",
-            "Allow ICMP (ping)",
-            "",
-            "Back"
-        ]
-
-        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
-        choice = utils.show_menu(menu)
-
-        if choice == 0:
-            forward_allow_traffic()
-        elif choice == 1:
-            forward_allow_es_rel()
-        elif choice == 2:
-            subprocess.run(["sudo", "iptables", "-A", "FORWARD", "-p", "icmp", "-j", "ACCEPT"])
-            utils.log("ICMP (ping) allowed on FORWARD.", "success")
-        elif choice == 4 or choice is None:
-            break
-
-        if choice in (0, 1, 2, 3):
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
-
-def manage_forward_chain():
-    while True:
-        os.system('clear')
-        utils.print_menu_name("Firewall > FORWARD Chain")
-
-        options = [
-            "Add rule",
-            "Remove rule",
-            "",
-            "Back"
-        ]
-
-        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
-        choice = utils.show_menu(menu)
-
-        if choice == 0:
-            forward_add_rule()
-        elif choice == 1:
-            forward_remove_rule()
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
-        elif choice == 3 or choice is None:
-            break
-
-def input_allow_port(port, proto="tcp"):
-    subprocess.run(["sudo", "iptables", "-A", "INPUT", "-p", proto, "--dport", str(port), "-j", "ACCEPT"])
-    utils.log(f"Allowed {proto.upper()} port {port} on INPUT.", "success")
-
-def input_allow_custom():
-    try:
-        proto = input(f"{utils.WHITE}Protocol (tcp/udp): {utils.RESET}").lower()
-        if proto not in ("tcp", "udp"):
-            utils.log("Invalid protocol.", "error")
-            return
-        port = input(f"{utils.WHITE}Port: {utils.RESET}")
-        if not port.isdigit():
-            utils.log("Invalid port.", "error")
-            return
-        input_allow_port(port, proto)
-    except KeyboardInterrupt:
-        pass
-
-def remove_rule(chain, table="filter"):
-    while True:
-        cmd = ["sudo", "iptables", "--line-numbers", "-n", "-v", "-L", chain]
-        if table != "filter":
-            cmd += ["-t", table]
-        result = subprocess.run(
-            cmd,
-            capture_output=True, text=True
-        )
-        lines = result.stdout.splitlines()
-        rules = []
-        for l in lines[2:]:
-            parts = l.split()
-            if not parts:
-                continue
-            num    = parts[0]
-            target = parts[3] if len(parts) > 3 else "?"
-            proto  = parts[4] if len(parts) > 4 else "?"
-            iface  = parts[6] if len(parts) > 6 else "?"
-            src    = parts[7] if len(parts) > 7 else "?"
-            dst    = parts[8] if len(parts) > 8 else "?"
-            extra  = " ".join(parts[9:]) if len(parts) > 9 else ""
-            rules.append((num, f"{num:<4} {target:<8} {proto:<6} {iface:<8} {src:<20} {dst:<20} {extra}"))
-
-        if not rules:
-            utils.log("No rules to remove.", "info")
-            return
-
-        os.system('clear')
-        utils.print_menu_name(f"Firewall > {chain} Chain > Remove rule")
-        print(f"{utils.GRAY}{'#':<4} {'TARGET':<8} {'PROTO':<6} {'IN':<8} {'SRC':<20} {'DST':<20} {'EXTRA'}{utils.RESET}")
-        menu = TerminalMenu([r[1] for r in rules], cycle_cursor=True, clear_screen=False, menu_cursor_style=utils.MENU_CURSOR_STYLE)
-        choice = utils.show_menu(menu)
-
-        if choice is None:
-            return
-
-        line_num = rules[choice][0]
-        cmd = ["sudo", "iptables", "-D", chain, line_num]
-        if table != "filter":
-            cmd = ["sudo", "iptables", "-t", table, "-D", chain, line_num]
-        subprocess.run(cmd)
-        utils.log(f"Rule {line_num} removed from {chain}.", "success")
-
-def input_remove_rule():
-    remove_rule("INPUT")
-
-def forward_remove_rule():
-    remove_rule("FORWARD")
-
-def input_add_rule():
-    while True:
-        os.system('clear')
-        utils.print_menu_name("Firewall > INPUT Chain > Add rule")
-
-        options = [
-            "HTTP (80/tcp)",
-            "HTTPS (443/tcp)",
-            "HTTP + HTTPS",
-            "ICMP (ping)",
-            "Custom port",
-            "",
-            "Back"
-        ]
-
-        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
-        choice = utils.show_menu(menu)
-
-        if choice == 0:
-            input_allow_port(80)
-        elif choice == 1:
-            input_allow_port(443)
-        elif choice == 2:
-            input_allow_port(80)
-            input_allow_port(443)
-        elif choice == 3:
-            subprocess.run(["sudo", "iptables", "-A", "INPUT", "-p", "icmp", "-j", "ACCEPT"])
-            utils.log("ICMP (ping) allowed on INPUT.", "success")
-        elif choice == 4:
-            input_allow_custom()
-        elif choice == 6 or choice is None:
-            break
-
-        if choice in (0, 1, 2, 3, 4):
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
-
-def manage_input_chain():
-    while True:
-        os.system('clear')
-        utils.print_menu_name("Firewall > INPUT Chain")
-
-        options = [
-            "Add rule",
-            "Remove rule",
-            "",
-            "Back"
-        ]
-
-        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
-        choice = utils.show_menu(menu)
-
-        if choice == 0:
-            input_add_rule()
-        elif choice == 1:
-            input_remove_rule()
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
-        elif choice == 3 or choice is None:
-            break
 
 def setup_secure_baseline():
     os.system('clear')
@@ -372,62 +122,12 @@ def setup_secure_baseline():
         except KeyboardInterrupt:
             pass
 
-def manage_prerouting():
-    while True:
-        os.system('clear')
-        utils.print_menu_name("Firewall > PREROUTING (DNAT)")
-
-        options = [
-            "Add rule",
-            "Remove rule",
-            "",
-            "Back"
-        ]
-
-        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
-        choice = utils.show_menu(menu)
-
-        if choice == 0:
-            pass  # TODO: DNAT / port forwarding
-        elif choice == 1:
-            pass  # TODO: remove rule
-        elif choice == 3 or choice is None:
-            break
-
-def masquerade():
-    iface_out = ask("Select interface for Masquarade")
-    if iface_out is None:
-        return
-    subprocess.run(shlex.split(f"sudo iptables -t nat -A POSTROUTING -o {iface_out} -j MASQUERADE"))
-    utils.log(f"Masquerade applied on interface {iface_out}.", "success")
-    
-def manage_postrouting():
-    while True:
-        os.system('clear')
-        utils.print_menu_name("Firewall > POSTROUTING (NAT)")
-
-        options = [
-            "Add rule",
-            "Remove rule",
-            "",
-            "Back"
-        ]
-
-        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
-        choice = utils.show_menu(menu)
-
-        if choice == 0:
-            masquerade()
-        elif choice == 1:
-            remove_rule("POSTROUTING", "nat")
-        elif choice == 3 or choice is None:
-            break
 
 def show_firewall_menu():
     while True:
-        os.system('clear') 
+        os.system('clear')
         utils.print_menu_name("Firewall Configuration (iptables)")
-        
+
         options = [
             "Default config (Wizard)",
             "INPUT Chain",
@@ -461,43 +161,32 @@ def show_firewall_menu():
         elif choice == 8 or choice is None:
             break
 
+
 def show_firewall_installation_menu():
     if not utils.is_service_installed("iptables"):
-        # List with options
-        options = ["Install iptables","Back to main menu"]
+        options = ["Install iptables", "Back to main menu"]
 
-        # Create object of the menu
         utils.print_menu_name("Firewall isn't installed.")
         menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, menu_cursor_style=utils.MENU_CURSOR_STYLE)
-
-        # Render the object
         choice = utils.show_menu(menu)
 
-        # reaction to the choice
         if choice == 0:
             utils.log("Starting an installation of iptables...", "info")
-
-            # run commands in terminal
             subprocess.run(["sudo", "apt", "update"])
-            subprocess.run(["sudo","apt","install","iptables","-y"])
+            subprocess.run(["sudo", "apt", "install", "iptables", "-y"])
 
             if utils.is_service_installed("iptables"):
                 utils.log("iptables installed.", "success")
             else:
-                
                 utils.log("Installation failed! Check logs or network connection.", "error")
             utils.log("Press Enter to continue...", "info")
         elif choice == 1 or choice is None:
             return
-        
-def run():
 
+
+def run():
     if not utils.is_service_installed("iptables"):
         show_firewall_installation_menu()
-    
+
     if utils.is_service_installed("iptables"):
         show_firewall_menu()
-            
-
-        
-        
