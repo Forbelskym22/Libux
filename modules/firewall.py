@@ -28,8 +28,26 @@ def show_firewall():
         "lo": utils.YELLOW
     }
 
-    result = subprocess.run(shlex.split("sudo iptables -L -v"), capture_output=True, text=True)
-    for line in result.stdout.splitlines():
+    filter_result = subprocess.run(["sudo", "iptables", "-L", "-v", "-t", "filter"], capture_output=True, text=True)
+    nat_result = subprocess.run(["sudo", "iptables", "-L", "-v", "-t", "nat"], capture_output=True, text=True)
+    for line in filter_result.stdout.splitlines():
+        if line.startswith("Chain"):
+            colored = " ".join(
+                f"{utils.GREEN}{w}{utils.RESET}" if w == "ACCEPT" else
+                f"{utils.RED}{w}{utils.RESET}" if w in ("DROP", "REJECT") else
+                f"{utils.PINK}{w}{utils.RESET}"
+                for w in line.split(" ")
+            )
+            print(colored)
+        else:
+            colored = " ".join(
+                f"{word_colors[w]}{w}{utils.RESET}" if w in word_colors else w
+                for w in line.split(" ")
+            )
+            print(colored)
+
+    print(f"\n{utils.PURPLE}--- NAT table ---{utils.RESET}")
+    for line in nat_result.stdout.splitlines():
         if line.startswith("Chain"):
             colored = " ".join(
                 f"{utils.GREEN}{w}{utils.RESET}" if w == "ACCEPT" else
