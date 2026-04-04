@@ -110,10 +110,6 @@ def forward_allow_es_rel():
     subprocess.run(cmd)
     utils.log("Established/related traffic allowed on FORWARD.", "success")
 
-
-
-
-
 def forward_add_rule():
     while True:
         os.system('clear')
@@ -190,10 +186,13 @@ def input_allow_custom():
     except KeyboardInterrupt:
         pass
 
-def remove_rule(chain):
+def remove_rule(chain, table="filter"):
     while True:
+        cmd = ["sudo", "iptables", "--line-numbers", "-n", "-v", "-L", chain]
+        if table != "filter":
+            cmd += ["-t", table]
         result = subprocess.run(
-            ["sudo", "iptables", "-L", chain, "--line-numbers", "-n", "-v"],
+            cmd,
             capture_output=True, text=True
         )
         lines = result.stdout.splitlines()
@@ -225,7 +224,10 @@ def remove_rule(chain):
             return
 
         line_num = rules[choice][0]
-        subprocess.run(["sudo", "iptables", "-D", chain, line_num])
+        cmd = ["sudo", "iptables", "-D", chain, line_num]
+        if table != "filter":
+            cmd = ["sudo", "iptables", "-t", table, "-D", chain, line_num]
+        subprocess.run(cmd)
         utils.log(f"Rule {line_num} removed from {chain}.", "success")
 
 def input_remove_rule():
@@ -370,6 +372,57 @@ def setup_secure_baseline():
         except KeyboardInterrupt:
             pass
 
+def manage_prerouting():
+    while True:
+        os.system('clear')
+        utils.print_menu_name("Firewall > PREROUTING (DNAT)")
+
+        options = [
+            "Add rule",
+            "Remove rule",
+            "",
+            "Back"
+        ]
+
+        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
+        choice = utils.show_menu(menu)
+
+        if choice == 0:
+            pass  # TODO: DNAT / port forwarding
+        elif choice == 1:
+            pass  # TODO: remove rule
+        elif choice == 3 or choice is None:
+            break
+
+def masquerade():
+    iface_out = ask("Select interface for Masquarade")
+    if iface_out is None:
+        return
+    subprocess.run(shlex.split(f"sudo iptables -t nat -A POSTROUTING -o {iface_out} -j MASQUERADE"))
+    utils.log(f"Masquerade applied on interface {iface_out}.", "success")
+    
+def manage_postrouting():
+    while True:
+        os.system('clear')
+        utils.print_menu_name("Firewall > POSTROUTING (NAT)")
+
+        options = [
+            "Add rule",
+            "Remove rule",
+            "",
+            "Back"
+        ]
+
+        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
+        choice = utils.show_menu(menu)
+
+        if choice == 0:
+            masquerade()
+        elif choice == 1:
+            remove_rule("POSTROUTING", "nat")
+        elif choice == 3 or choice is None:
+            break
+
 def show_firewall_menu():
     while True:
         os.system('clear') 
@@ -379,7 +432,8 @@ def show_firewall_menu():
             "Default config (Wizard)",
             "INPUT Chain",
             "FORWARD Chain",
-            "NAT / MANGLE",
+            "PREROUTING (DNAT / Port forwarding)",
+            "POSTROUTING (MASQUERADE)",
             "",
             "Show",
             "Save",
@@ -396,13 +450,15 @@ def show_firewall_menu():
         elif choice == 2:
             manage_forward_chain()
         elif choice == 3:
-            manage_forward_chain()
-        elif choice == 5:
+            manage_prerouting()
+        elif choice == 4:
+            manage_postrouting()
+        elif choice == 6:
             show_firewall()
-        elif choice == 6: 
+        elif choice == 7:
             utils.log("Save function here...", "info")
             input("\nPress Enter to continue...")
-        elif choice == 7 or choice is None:
+        elif choice == 8 or choice is None:
             break
 
 def show_firewall_installation_menu():
