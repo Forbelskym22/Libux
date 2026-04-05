@@ -9,6 +9,17 @@ def ask(prompt):
         return input(f"{utils.WHITE}{prompt}{utils.GRAY} (Enter to skip): {utils.RESET}").strip()
     except KeyboardInterrupt:
         return None
+    
+def ask_required(prompt):
+    try:
+        value = input(f"{utils.WHITE}{prompt}: {utils.RESET}").strip()
+        if not value:
+            utils.log("This field is required.", "error")
+            return ask_required(prompt)
+        return value
+    except KeyboardInterrupt:
+        return None
+
 
 
 def remove_rule(chain, table="filter"):
