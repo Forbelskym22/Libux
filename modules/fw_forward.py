@@ -2,7 +2,7 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import ask, remove_rule
+from modules.fw_shared import ask, remove_rule, show_chain
 
 
 def forward_allow_traffic():
@@ -107,6 +107,7 @@ def manage_forward_chain():
             "Add rule",
             "Remove rule",
             "",
+            "Show",
             "Back"
         ]
 
@@ -121,5 +122,7 @@ def manage_forward_chain():
                 input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
             except KeyboardInterrupt:
                 pass
-        elif choice == 3 or choice is None:
+        elif choice == 3:
+            show_chain("FORWARD")
+        elif choice == 4 or choice is None:
             break

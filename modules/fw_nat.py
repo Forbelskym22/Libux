@@ -3,7 +3,7 @@ import subprocess
 import shlex
 import os
 from modules import utils
-from modules.fw_shared import ask, ask_required, remove_rule
+from modules.fw_shared import ask, ask_required, remove_rule, show_chain
 
 
 def masquerade():
@@ -23,6 +23,7 @@ def manage_postrouting():
             "Add rule",
             "Remove rule",
             "",
+            "Show",
             "Back"
         ]
 
@@ -33,7 +34,9 @@ def manage_postrouting():
             masquerade()
         elif choice == 1:
             remove_rule("POSTROUTING", "nat")
-        elif choice == 3 or choice is None:
+        elif choice == 3:
+            show_chain("POSTROUTING", "nat")
+        elif choice == 4 or choice is None:
             break
 
 def prerouting():
@@ -66,6 +69,7 @@ def manage_prerouting():
             "Add rule",
             "Remove rule",
             "",
+            "Show",
             "Back"
         ]
 
@@ -76,5 +80,7 @@ def manage_prerouting():
             prerouting()
         elif choice == 1:
             remove_rule("PREROUTING", "nat")
-        elif choice == 3 or choice is None:
+        elif choice == 3:
+            show_chain("PREROUTING", "nat")
+        elif choice == 4 or choice is None:
             break
