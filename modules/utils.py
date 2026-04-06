@@ -1,4 +1,7 @@
 import shutil
+import shlex
+import subprocess
+from simple_term_menu import TerminalMenu
 
 # simple_term_menu cursor style (globally used)
 MENU_CURSOR_STYLE = ("fg_purple", "bold")
@@ -15,6 +18,23 @@ ORANGE = "\033[38;5;208m"
 GRAY = "\033[38;5;240m"
 RESET = "\033[0m"
 PREFIX = f"{PURPLE}[Libux]{RESET}"
+
+
+def pick_interface(text =""):
+    result = subprocess.run(shlex.split("ip -o link show"), capture_output=True, text=True)
+    interfaces = [line.split()[1].strip(":") for line in result.stdout.splitlines()]
+    
+
+    message = "choose interface"
+    if text != "":
+        message = message + f" ({text})"
+    log(message,"info")
+
+    menu = TerminalMenu(interfaces, cycle_cursor=True, clear_screen=False, menu_cursor_style=MENU_CURSOR_STYLE)
+    choice = show_menu(menu)
+    if choice is None:
+        return None
+    return interfaces[choice]
 
 def is_service_installed(service_name):
     """

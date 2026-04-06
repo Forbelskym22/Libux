@@ -7,7 +7,7 @@ from modules.fw_shared import ask, ask_required, remove_rule, show_chain
 
 
 def masquerade():
-    iface_out = ask("Select interface for Masquerade")
+    iface_out = utils.pick_interface("out")
     if iface_out is None:
         return
     subprocess.run(shlex.split(f"sudo iptables -t nat -A POSTROUTING -o {iface_out} -j MASQUERADE"))
@@ -40,7 +40,7 @@ def manage_postrouting():
             break
 
 def prerouting():
-    iface_in = ask_required("Select interface for port forwarding")
+    iface_in = utils.pick_interface("in")
     if iface_in is None: return
     port = ask_required("Select port from which to forward")
     if port is None: return
