@@ -9,9 +9,9 @@ def forward_allow_traffic():
     os.system('clear')
     utils.print_menu_name("Firewall > FORWARD Chain > Allow traffic")
 
-    iface_in  = ask("From interface (e.g. eth0)")
+    iface_in  = utils.pick_interface("in")
     if iface_in is None: return
-    iface_out = ask("To interface (e.g. eth1)")
+    iface_out = utils.pick_interface("out")
     if iface_out is None: return
     src       = ask("Source IP/subnet (e.g. 192.168.1.0/24)")
     if src is None: return
