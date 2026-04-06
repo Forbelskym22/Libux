@@ -21,14 +21,14 @@ def ask_required(prompt):
         return None
 
 
-def show_chain(chain):
-    cmd = ["sudo", "iptables", "--line-numbers", "-n", "-v", "-L", chain]
+def show_chain(chain, table="filter"):
+    cmd = ["sudo", "iptables", "--line-numbers", "-n", "-v", "-L", chain, "-t", table]
     result = subprocess.run(cmd, capture_output=True, text=True)
     lines = result.stdout.splitlines()
     if len(lines) < 3:
         utils.log("No rules...", "error")
         input("\nPress Enter to continue...")
-
+        return
     
     os.system('clear')
     utils.print_menu_name(f" {chain} ")
