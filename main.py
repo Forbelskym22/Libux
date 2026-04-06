@@ -5,6 +5,9 @@ from modules import firewall
 from modules import utils
 
 def main():
+    if os.geteuid() != 0:
+        utils.log("This script requires root permissions. Run with sudo.", "error")
+        sys.exit(1)
     options = ["Firewall (iptables)", "Ukončit Libux"]
     
     while True:
