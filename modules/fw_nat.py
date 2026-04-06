@@ -3,7 +3,7 @@ import subprocess
 import shlex
 import os
 from modules import utils
-from modules.fw_shared import ask, remove_rule
+from modules.fw_shared import ask, ask_required, remove_rule
 
 
 def masquerade():
@@ -36,6 +36,26 @@ def manage_postrouting():
         elif choice == 3 or choice is None:
             break
 
+def prerouting():
+    iface_in = ask_required("Select interface for port forwarding")
+    if iface_in is None: return
+    port = ask_required("Select port from which to forward")
+    if port is None: return
+    des_ip = ask_required("Select destination IP address")
+    if des_ip is None: return
+    des_port = ask_required("Select port to which forward to")
+    if des_port is None: return
+    
+    subprocess.run(["sudo", "iptables", "-t", "nat", "-A", "PREROUTING", "-i", iface_in, "-p", "tcp", "--dport", port, "-j", "DNAT", "--to-destination", f"{des_ip}:{des_port}"])
+    utils.log(f"{iface_in}:{port} → {des_ip}:{des_port} (DNAT)", "success")
+
+    check = subprocess.run(["sudo", "iptables", "-C", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", "tcp", "--dport", des_port, "-j", "ACCEPT"])
+    if check.returncode == 1:
+        subprocess.run(["sudo", "iptables", "-A", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", "tcp", "--dport", des_port, "-j", "ACCEPT"])
+        utils.log(f"FORWARD rule added automatically for {des_ip}:{des_port}.", "info")
+
+    
+
 
 def manage_prerouting():
     while True:
@@ -53,7 +73,7 @@ def manage_prerouting():
         choice = utils.show_menu(menu)
 
         if choice == 0:
-            pass  # TODO: DNAT / port forwarding
+            prerouting()
         elif choice == 1:
             remove_rule("PREROUTING", "nat")
         elif choice == 3 or choice is None:

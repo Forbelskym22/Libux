@@ -4,14 +4,14 @@ A text-based interface application designed for basic configuration of a Linux s
 ## Features
 - Firewall (iptables)
 - Network connectivity
-- Users and groups
-- Permissions
+- DHCP
 - SSH
 - Apache2
-- DHCP
-- MariaDB
-- Disk quotas
 - Routing
+- Users and groups
+- Disk quotas
+- Permissions
+- MariaDB
 
 ## Requirements
 - Python 3.x
