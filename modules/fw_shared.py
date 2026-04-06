@@ -21,6 +21,44 @@ def ask_required(prompt):
         return None
 
 
+def show_chain(chain):
+    cmd = ["sudo", "iptables", "--line-numbers", "-n", "-v", "-L", chain]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    lines = result.stdout.splitlines()
+    if len(lines) < 3:
+        utils.log("No rules...", "error")
+        input("\nPress Enter to continue...")
+
+    
+    os.system('clear')
+    utils.print_menu_name(f" {chain} ")
+    
+    word_colors = {
+        "ACCEPT": utils.GREEN,
+        "DROP": utils.RED,
+        "REJECT": utils.RED,
+        "all": utils.GRAY,
+        "tcp": utils.WHITE,
+        "udp": utils.WHITE,
+        "icmp": utils.WHITE,
+        "lo": utils.YELLOW
+    }
+    
+    
+    for  l in lines:
+        if not l.strip():
+            continue
+        colored = " ".join(
+            f"{word_colors[w]}{w}{utils.RESET}" 
+            if w in word_colors 
+            else w for w in l.split(" ")
+        )
+        print(colored)
+
+    try:
+        input("\nPress Enter to continue...")
+    except KeyboardInterrupt:
+        pass
 
 def remove_rule(chain, table="filter"):
     while True:
