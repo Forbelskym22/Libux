@@ -3,7 +3,7 @@ import subprocess
 import shlex
 import os
 from modules import utils
-from modules.fw_shared import remove_rule, show_chain, rule_exists, ask
+from modules.fw_shared import remove_rule, show_chain, rule_exists, ask, flush_chain
 
 
 def input_allow_port(port, proto="tcp"):
@@ -88,6 +88,7 @@ def input_add_rule():
             input_allow_custom()
         elif choice == 6 or choice is None:
             break
+        
 
         if choice in (0, 1, 2, 3, 4):
             try:
@@ -106,7 +107,8 @@ def manage_input_chain():
             "Remove rule",
             "",
             "Show",
-            "Back"
+            "Back",
+            "Flush"
         ]
 
         menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
@@ -124,3 +126,5 @@ def manage_input_chain():
             show_chain("INPUT")
         elif choice == 4 or choice is None:
             break
+        elif choice == 5:
+            flush_chain("INPUT")

@@ -2,7 +2,7 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import ask, remove_rule, show_chain, rule_exists
+from modules.fw_shared import ask, remove_rule, show_chain, rule_exists, flush_chain
 
 
 def forward_allow_traffic():
@@ -72,7 +72,7 @@ def forward_allow_es_rel():
 
     iface_in  = utils.pick_interface("in")
     if iface_in is None: return
-    
+
     iface_out = utils.pick_interface("out")
     if iface_out is None: return
 
@@ -120,6 +120,7 @@ def forward_add_rule():
                     
         elif choice == 4 or choice is None:
             break
+        
 
         if choice in (0, 1, 2):
             try:
@@ -138,7 +139,8 @@ def manage_forward_chain():
             "Remove rule",
             "",
             "Show",
-            "Back"
+            "Back",
+            "Flush"
         ]
 
         menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
@@ -156,3 +158,5 @@ def manage_forward_chain():
             show_chain("FORWARD")
         elif choice == 4 or choice is None:
             break
+        elif choice == 5:
+            flush_chain("FORWARD")

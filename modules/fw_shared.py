@@ -3,6 +3,17 @@ import subprocess
 import os
 from modules import utils
 
+def flush_chain(chain, table="filter"):
+    confirm = utils.choose(["yes", "no"], f"WARNING: this will flush all rules in {chain}!", "error")
+    if confirm != "yes": 
+        return
+    cmd = ["sudo","iptables","-F", chain]
+    if table != "filter":
+        cmd += ["-t", table]
+    subprocess.run(cmd)
+    utils.log(f"{chain} flushed.", "success")
+
+
 def rule_exists(cmd):
     check_cmd = [c if c != "-A" else "-C" for c in cmd]
     result = subprocess.run(check_cmd, capture_output=True)
