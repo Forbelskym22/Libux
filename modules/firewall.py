@@ -6,7 +6,7 @@ from modules import utils
 from modules.fw_shared import remove_rule
 from modules.fw_input import manage_input_chain
 from modules.fw_forward import manage_forward_chain
-from modules.fw_nat import manage_prerouting, manage_postrouting
+from modules.fw_nat import manage_prerouting, manage_postrouting, ask, ask_required
 
 
 def show_firewall():
@@ -78,18 +78,30 @@ def setup_secure_baseline():
     def get_ssh_port():
         while True:
             try:
-                port = input(f"{utils.WHITE}Insert your SSH port: {utils.RESET}")
+                port = ask_required("Insert your SSH port")
             except KeyboardInterrupt:
                 return None
             if utils.check_port(port):
                 return port
             utils.log("That's not a port number!", "error")
+
+    def get_ssh_ip():
+        while True:
+            try:
+                ip = ask("Insert your SSH source IP")
+            except KeyboardInterrupt:
+                return None
+            if not ip: return None  # Enter to skip
+            if utils.check_ip(ip): return ip
+            utils.log("That's not an ip address!", "error")
+
     
     allow_ssh = utils.choose(["yes","no"], "Do you want to allow ssh to your machine?")
     if allow_ssh is None:
         return  
     if allow_ssh == "yes":
         ssh_port = get_ssh_port()
+        ssh_ip = get_ssh_ip()
 
     try:
         confirm = utils.choose(["yes","no"], "WARNING: This will flush existing INPUT rules! Proceed? (y/n)", "error")
@@ -107,18 +119,26 @@ def setup_secure_baseline():
         ]
 
         if allow_ssh == "yes" and ssh_port:
-            core_commands.append(f"sudo iptables -A INPUT -p tcp --dport {ssh_port} -j ACCEPT")
-
-        for cmd in core_commands:
-            subprocess.run(shlex.split(cmd))
+            if ssh_ip:
+                core_commands.append(f"sudo iptables -A INPUT -s {ssh_ip} -p tcp --dport {ssh_port} -j ACCEPT")
+            else:
+                core_commands.append(f"sudo iptables -A INPUT -p tcp --dport {ssh_port} -j ACCEPT")
+        
 
         try:
             allow_icmp = utils.choose(["yes","no"], "Allow ICMP?")
             if allow_icmp == "yes":
-                subprocess.run(shlex.split("sudo iptables -A INPUT -p icmp -j ACCEPT"))
+                icmp_ip = ask("Select an source IP address to allow ICMP from")
+                if icmp_ip:
+                    core_commands.append(f"sudo iptables -A INPUT -s {icmp_ip} -p icmp -j ACCEPT")
+                else:
+                    core_commands.append("sudo iptables -A INPUT -p icmp -j ACCEPT")
                 utils.log("Ping allowed.", "success")
         except KeyboardInterrupt:
             pass
+
+        for cmd in core_commands:
+            subprocess.run(shlex.split(cmd))
 
         subprocess.run(shlex.split("sudo iptables -P INPUT DROP"))
         subprocess.run(shlex.split("sudo iptables -P FORWARD DROP"))
