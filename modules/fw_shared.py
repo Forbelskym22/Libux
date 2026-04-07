@@ -3,6 +3,13 @@ import subprocess
 import os
 from modules import utils
 
+def toggle_policy(chain):
+    result = subprocess.run(["sudo", "iptables", "-L", chain, "--line-numbers", "-n"],capture_output=True, text=True)
+    current = "DROP" if "policy DROP" in result.stdout else "ACCEPT"
+    new_policy = "DROP" if current == "ACCEPT" else "ACCEPT"
+    subprocess.run(["sudo", "iptables", "-P", chain, new_policy])
+    utils.log(f"{chain} policy: {current} -> {new_policy}", "success")
+
 def flush_chain(chain, table="filter"):
     confirm = utils.choose(["yes", "no"], f"WARNING: this will flush all rules in {chain}!", "error")
     if confirm != "yes": 
@@ -40,17 +47,10 @@ def show_chain(chain, table="filter"):
     cmd = ["sudo", "iptables", "--line-numbers", "-n", "-v", "-L", chain, "-t", table]
     result = subprocess.run(cmd, capture_output=True, text=True)
     lines = result.stdout.splitlines()
-    if len(lines) < 3:
-        utils.log("No rules...", "error")
-        try:
-            input("\nPress Enter to continue...")
-        except KeyboardInterrupt:
-            pass
-        return
-    
+
     os.system('clear')
     utils.print_menu_name(f" {chain} ")
-    
+
     word_colors = {
         "ACCEPT": utils.GREEN,
         "DROP": utils.RED,
@@ -61,9 +61,8 @@ def show_chain(chain, table="filter"):
         "icmp": utils.WHITE,
         "lo": utils.YELLOW
     }
-    
-    
-    for  l in lines:
+
+    for l in lines:
         if not l.strip():
             continue
         colored = " ".join(
