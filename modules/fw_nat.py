@@ -3,7 +3,7 @@ import subprocess
 import shlex
 import os
 from modules import utils
-from modules.fw_shared import ask, ask_required, remove_rule, show_chain, rule_exists
+from modules.fw_shared import ask, ask_required, remove_rule, show_chain, rule_exists, flush_chain
 
 
 def masquerade():
@@ -30,7 +30,8 @@ def manage_postrouting():
             "Remove rule",
             "",
             "Show",
-            "Back"
+            "Back",
+            "Flush"
         ]
 
         menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
@@ -44,6 +45,8 @@ def manage_postrouting():
             show_chain("POSTROUTING", "nat")
         elif choice == 4 or choice is None:
             break
+        elif choice == 5:
+            flush_chain("POSTROUTING", "nat")
 
 def prerouting():
     iface_in = utils.pick_interface("in")
@@ -116,7 +119,8 @@ def manage_prerouting():
             "Remove rule",
             "",
             "Show",
-            "Back"
+            "Back",
+            "Flush"
         ]
 
         menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
@@ -130,3 +134,5 @@ def manage_prerouting():
             show_chain("PREROUTING", "nat")
         elif choice == 4 or choice is None:
             break
+        elif choice == 5:
+            flush_chain("PREROUTING", "nat")

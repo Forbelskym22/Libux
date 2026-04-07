@@ -3,7 +3,7 @@ import subprocess
 import shlex
 import os
 from modules import utils
-from modules.fw_shared import remove_rule, show_chain, rule_exists, ask
+from modules.fw_shared import remove_rule, show_chain, rule_exists, ask, flush_chain, toggle_policy
 
 
 def input_allow_port(port, proto="tcp"):
@@ -88,6 +88,7 @@ def input_add_rule():
             input_allow_custom()
         elif choice == 6 or choice is None:
             break
+        
 
         if choice in (0, 1, 2, 3, 4):
             try:
@@ -105,6 +106,9 @@ def manage_input_chain():
             "Add rule",
             "Remove rule",
             "",
+            "Flush chain",
+            "Toggle policy",
+            "",
             "Show",
             "Back"
         ]
@@ -121,6 +125,14 @@ def manage_input_chain():
             except KeyboardInterrupt:
                 pass
         elif choice == 3:
+            flush_chain("INPUT")
+        elif choice == 4:
+            toggle_policy("INPUT")
+            try:
+                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+            except KeyboardInterrupt:
+                pass
+        elif choice == 6:
             show_chain("INPUT")
-        elif choice == 4 or choice is None:
+        elif choice == 7 or choice is None:
             break
