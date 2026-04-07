@@ -3,15 +3,20 @@ import subprocess
 import shlex
 import os
 from modules import utils
-from modules.fw_shared import ask, ask_required, remove_rule, show_chain
+from modules.fw_shared import ask, ask_required, remove_rule, show_chain, rule_exists
 
 
 def masquerade():
     iface_out = utils.pick_interface("out")
     if iface_out is None:
         return
-    subprocess.run(shlex.split(f"sudo iptables -t nat -A POSTROUTING -o {iface_out} -j MASQUERADE"))
-    utils.log(f"Masquerade applied on interface {iface_out}.", "success")
+    
+    cmd = ["sudo", "iptables", "-t", "nat", "-A", "POSTROUTING", "-o", iface_out, "-j", "MASQUERADE"]
+    if rule_exists(cmd):
+        utils.log("Rule already exists.", "info")
+    else:
+        subprocess.run(cmd)
+        utils.log(f"Masquerade applied on interface {iface_out}.", "success")
 
 
 def manage_postrouting():
@@ -62,8 +67,13 @@ def prerouting():
         if utils.check_port(des_port): break
         utils.log("Invalid port.", "error") 
     
-    subprocess.run(["sudo", "iptables", "-t", "nat", "-A", "PREROUTING", "-i", iface_in, "-p", "tcp", "--dport", port, "-j", "DNAT", "--to-destination", f"{des_ip}:{des_port}"])
-    utils.log(f"{iface_in}:{port} → {des_ip}:{des_port} (DNAT)", "success")
+    dnat_cmd = ["sudo", "iptables", "-t", "nat", "-A", "PREROUTING", "-i", iface_in, "-p", "tcp", "--dport", port, "-j", "DNAT", "--to-destination", f"{des_ip}:{des_port}"]
+
+    if rule_exists(dnat_cmd):
+        utils.log("Rule already exists.", "info")
+    else:
+        subprocess.run(dnat_cmd)
+        utils.log(f"{iface_in}:{port} → {des_ip}:{des_port} (DNAT)", "success")
 
     check = subprocess.run(["sudo", "iptables", "-C", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", "tcp", "--dport", des_port, "-j", "ACCEPT"])
     if check.returncode == 1:
