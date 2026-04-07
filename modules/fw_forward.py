@@ -13,10 +13,22 @@ def forward_allow_traffic():
     if iface_in is None: return
     iface_out = utils.pick_interface("out")
     if iface_out is None: return
-    src       = ask("Source IP/subnet (e.g. 192.168.1.0/24)")
+    
+    src = ask("Source IP/subnet (e.g. 192.168.1.0/24)")
+
     if src is None: return
-    dst       = ask("Destination IP/subnet (e.g. 10.0.0.5)")
+
+    if src and not utils.check_ip(src):
+        utils.log("Invalid IP.", "error")
+        return
+    
+    dst = ask("Destination IP/subnet (e.g. 10.0.0.5)")
+
     if dst is None: return
+
+    if dst and not utils.check_ip(dst):
+        utils.log("Invalid IP.", "error")
+        return
 
     proto_menu = TerminalMenu(["tcp", "udp", "any"], cycle_cursor=True, clear_screen=False, menu_cursor_style=utils.MENU_CURSOR_STYLE)
     proto_choice = utils.show_menu(proto_menu)
@@ -35,7 +47,7 @@ def forward_allow_traffic():
     if dst:       cmd += ["-d", dst]
     if proto in ("tcp", "udp"):
         cmd += ["-p", proto]
-        if port and port.isdigit():
+        if utils.check_port(port):
             cmd += ["--dport", port]
     cmd += ["-j", "ACCEPT"]
 
@@ -44,16 +56,15 @@ def forward_allow_traffic():
 
 
 def forward_allow_es_rel():
-    try:
-        permission = input(f"{utils.WHITE}Allow related/established{utils.GRAY} (y/n): {utils.RESET}").strip()
-    except KeyboardInterrupt:
-        return
-    if permission != "y":
+    
+    permission = utils.choose(["yes", "no"], "Allow related/established")
+    
+    if permission != "yes":
         return
 
-    iface_in  = ask("From interface (e.g. eth1 = LAN)")
+    iface_in  = utils.pick_interface("in")
     if iface_in is None: return
-    iface_out = ask("To interface (e.g. eth0 = WAN)")
+    iface_out = utils.pick_interface("out")
     if iface_out is None: return
 
     cmd = ["sudo", "iptables", "-A", "FORWARD"]
