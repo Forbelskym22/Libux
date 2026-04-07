@@ -21,6 +21,7 @@ RESET = "\033[0m"
 PREFIX = f"{PURPLE}[Libux]{RESET}"
 
 
+
 def check_ip(ip):
     try:
         ipaddress.ip_network(ip, strict = False)
