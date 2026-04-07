@@ -84,20 +84,24 @@ def prerouting():
         utils.log("Rule already exists.", "info")
     else:
         subprocess.run(dnat_cmd)
-        utils.log(f"{iface_in}:{port} → {des_ip}:{des_port} (DNAT)", "success")
+        utils.log(f"{iface_in}:{port} -> {des_ip}:{des_port} (DNAT)", "success")
 
     check_cmd = ["sudo", "iptables", "-C", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", protocol, "--dport", des_port]
     if src_ip: check_cmd += ["-s", src_ip]
     check_cmd += ["-j", "ACCEPT"]
-    check = subprocess.run(check_cmd)
+    check = subprocess.run(check_cmd, capture_output=True)
 
-    if check.returncode == 1:
+    if check.returncode != 0:
         forward_cmd = ["sudo", "iptables", "-A", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", protocol, "--dport", des_port]
         if src_ip: forward_cmd += ["-s", src_ip]
         forward_cmd += ["-j", "ACCEPT"]
 
         subprocess.run(forward_cmd)
         utils.log(f"FORWARD rule added automatically for {des_ip}:{des_port}.", "info")
+    try:
+        input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+    except KeyboardInterrupt:
+        pass
 
     
 
