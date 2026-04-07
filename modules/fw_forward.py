@@ -2,7 +2,7 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import ask, remove_rule, show_chain
+from modules.fw_shared import ask, remove_rule, show_chain, rule_exists
 
 
 def forward_allow_traffic():
@@ -51,8 +51,13 @@ def forward_allow_traffic():
             cmd += ["--dport", port]
     cmd += ["-j", "ACCEPT"]
 
-    subprocess.run(cmd)
-    utils.log("Forward rule added.", "success")
+
+    if rule_exists(cmd):
+        utils.log("Rule already exists.", "info")
+    else:
+        subprocess.run(cmd)
+        utils.log("Forward rule added.", "success")
+    
 
 
 def forward_allow_es_rel():
@@ -72,8 +77,12 @@ def forward_allow_es_rel():
     if iface_out: cmd += ["-o", iface_out]
     cmd += ["-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"]
 
-    subprocess.run(cmd)
-    utils.log("Established/related traffic allowed on FORWARD.", "success")
+    if rule_exists(cmd):
+        utils.log("Rule already exists.", "info")
+    else:
+        subprocess.run(cmd)
+        utils.log("Established/related traffic allowed on FORWARD.", "success")
+
 
 
 def forward_add_rule():
@@ -97,8 +106,13 @@ def forward_add_rule():
         elif choice == 1:
             forward_allow_es_rel()
         elif choice == 2:
-            subprocess.run(["sudo", "iptables", "-A", "FORWARD", "-p", "icmp", "-j", "ACCEPT"])
-            utils.log("ICMP (ping) allowed on FORWARD.", "success")
+            cmd = ["sudo", "iptables", "-A", "FORWARD", "-p", "icmp", "-j", "ACCEPT"]
+            if rule_exists(cmd):
+                utils.log("Rule already exists.", "info")
+            else:
+                subprocess.run(cmd)
+                utils.log("ICMP (ping) allowed on FORWARD.", "success")
+                    
         elif choice == 4 or choice is None:
             break
 

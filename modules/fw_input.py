@@ -3,12 +3,17 @@ import subprocess
 import shlex
 import os
 from modules import utils
-from modules.fw_shared import remove_rule, show_chain
+from modules.fw_shared import remove_rule, show_chain, rule_exists
 
 
 def input_allow_port(port, proto="tcp"):
-    subprocess.run(["sudo", "iptables", "-A", "INPUT", "-p", proto, "--dport", str(port), "-j", "ACCEPT"])
-    utils.log(f"Allowed {proto.upper()} port {port} on INPUT.", "success")
+    cmd = ["sudo", "iptables", "-A", "INPUT", "-p", proto, "--dport", str(port), "-j", "ACCEPT"]
+    if rule_exists(cmd):
+        utils.log("Rule already exists.", "info")
+    else:
+        subprocess.run(cmd)
+        utils.log(f"Allowed {proto.upper()} port {port} on INPUT.", "success")
+
 
 
 def input_allow_custom():
@@ -54,8 +59,13 @@ def input_add_rule():
             input_allow_port(80)
             input_allow_port(443)
         elif choice == 3:
-            subprocess.run(["sudo", "iptables", "-A", "INPUT", "-p", "icmp", "-j", "ACCEPT"])
-            utils.log("ICMP (ping) allowed on INPUT.", "success")
+            icmp_cmd = ["sudo", "iptables", "-A", "INPUT", "-p", "icmp", "-j", "ACCEPT"]
+            if rule_exists(icmp_cmd):
+                utils.log("Rule already exists.", "info")
+            else:
+                subprocess.run(icmp_cmd)
+                utils.log("ICMP (ping) allowed on INPUT.", "success")
+
         elif choice == 4:
             input_allow_custom()
         elif choice == 6 or choice is None:
