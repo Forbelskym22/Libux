@@ -3,6 +3,10 @@ import subprocess
 import os
 from modules import utils
 
+def rule_exists(cmd):
+    check_cmd = [c if c != "-A" else "-C" for c in cmd]
+    result = subprocess.run(check_cmd, capture_output=True)
+    return result.returncode == 0
 
 def ask(prompt):
     try:
