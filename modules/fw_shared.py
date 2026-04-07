@@ -31,7 +31,10 @@ def show_chain(chain, table="filter"):
     lines = result.stdout.splitlines()
     if len(lines) < 3:
         utils.log("No rules...", "error")
-        input("\nPress Enter to continue...")
+        try:
+            input("\nPress Enter to continue...")
+        except KeyboardInterrupt:
+            pass
         return
     
     os.system('clear')
