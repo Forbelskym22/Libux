@@ -49,11 +49,17 @@ def prerouting():
     if iface_in is None: return
 
     while True:
+        src_ip = ask("Source IP/subnet (optional)")
+        if src_ip is None: return
+        if not src_ip or utils.check_ip(src_ip): break
+        utils.log("Invalid IP.", "error")
+
+
+    while True:
         port = ask_required("Select port from which to forward")
         if port is None: return
         if utils.check_port(port): break
         utils.log("Invalid port.", "error")     
-
 
     while True:
         des_ip = ask_required("Select destination IP address")
@@ -67,7 +73,9 @@ def prerouting():
         if utils.check_port(des_port): break
         utils.log("Invalid port.", "error") 
     
-    dnat_cmd = ["sudo", "iptables", "-t", "nat", "-A", "PREROUTING", "-i", iface_in, "-p", "tcp", "--dport", port, "-j", "DNAT", "--to-destination", f"{des_ip}:{des_port}"]
+    dnat_cmd = ["sudo", "iptables", "-t", "nat", "-A", "PREROUTING", "-i", iface_in]
+    if src_ip: dnat_cmd += ["-s", src_ip]
+    dnat_cmd +=  ["-p", "tcp", "--dport", port, "-j", "DNAT", "--to-destination", f"{des_ip}:{des_port}"]
 
     if rule_exists(dnat_cmd):
         utils.log("Rule already exists.", "info")
@@ -75,9 +83,17 @@ def prerouting():
         subprocess.run(dnat_cmd)
         utils.log(f"{iface_in}:{port} → {des_ip}:{des_port} (DNAT)", "success")
 
-    check = subprocess.run(["sudo", "iptables", "-C", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", "tcp", "--dport", des_port, "-j", "ACCEPT"])
+    check_cmd = ["sudo", "iptables", "-C", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", "tcp", "--dport", des_port]
+    if src_ip: check_cmd += ["-s", src_ip]
+    check_cmd += ["-j", "ACCEPT"]
+    check = subprocess.run(check_cmd)
+
     if check.returncode == 1:
-        subprocess.run(["sudo", "iptables", "-A", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", "tcp", "--dport", des_port, "-j", "ACCEPT"])
+        forward_cmd = ["sudo", "iptables", "-A", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", "tcp", "--dport", des_port]
+        if src_ip: forward_cmd += ["-s", src_ip]
+        forward_cmd += ["-j", "ACCEPT"]
+
+        subprocess.run(forward_cmd)
         utils.log(f"FORWARD rule added automatically for {des_ip}:{des_port}.", "info")
 
     
