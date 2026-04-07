@@ -69,6 +69,7 @@ def show_firewall():
         pass
 
 
+
 def setup_secure_baseline():
     os.system('clear')
     utils.print_menu_name("Secure Baseline Wizard")
@@ -77,34 +78,26 @@ def setup_secure_baseline():
     def get_ssh_port():
         while True:
             try:
-                choice = input(f"\n{utils.WHITE}Is your SSH running on port 22? (y/n): {utils.RESET}").lower()
+                port = input(f"{utils.WHITE}Insert your SSH port: {utils.RESET}")
             except KeyboardInterrupt:
                 return None
-            if choice == "y":
-                return "22"
-            elif choice == "n":
-                try:
-                    port = input(f"{utils.WHITE}Insert your SSH port: {utils.RESET}")
-                except KeyboardInterrupt:
-                    return None
-                if port.isdigit():
-                    return port
-                utils.log("That's not a number!", "error")
-            else:
-                utils.log("Invalid input, type 'y' or 'n'.", "error")
-
-    ssh_port = get_ssh_port()
-    if ssh_port is None:
-        utils.log("Wizard cancelled.", "info")
-        return
+            if utils.check_port(port):
+                return port
+            utils.log("That's not a port number!", "error")
+    
+    allow_ssh = utils.choose(["yes","no"], "Do you want to allow ssh to your machine?")
+    if allow_ssh is None:
+        return  
+    if allow_ssh == "yes":
+        ssh_port = get_ssh_port()
 
     try:
-        confirm = input(f"\n{utils.RED}WARNING: This will flush existing INPUT rules! Proceed? (y/n): {utils.RESET}").lower()
+        confirm = utils.choose(["yes","no"], "WARNING: This will flush existing INPUT rules! Proceed? (y/n)", "error")
     except KeyboardInterrupt:
         utils.log("Wizard cancelled.", "info")
         return
 
-    if confirm == 'y':
+    if confirm == 'yes':
         utils.log("Applying core rules...", "info")
 
         core_commands = [
@@ -112,14 +105,17 @@ def setup_secure_baseline():
             "sudo iptables -A INPUT -i lo -j ACCEPT",
             "sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT",
             "sudo iptables -A INPUT -p udp --sport 53 -j ACCEPT",
-            f"sudo iptables -A INPUT -p tcp --dport {ssh_port} -j ACCEPT"
         ]
+
+        if allow_ssh == "yes" and ssh_port:
+            core_commands.append(f"sudo iptables -A INPUT -p tcp --dport {ssh_port} -j ACCEPT")
 
         for cmd in core_commands:
             subprocess.run(shlex.split(cmd))
 
         try:
-            if input(f"\n{utils.WHITE}Allow ICMP (Ping)? (y/n): {utils.RESET}").lower() == "y":
+            allow_icmp = utils.choose(["yes","no"], "Allow ICMP?")
+            if allow_icmp == "yes":
                 subprocess.run(shlex.split("sudo iptables -A INPUT -p icmp -j ACCEPT"))
                 utils.log("Ping allowed.", "success")
         except KeyboardInterrupt:

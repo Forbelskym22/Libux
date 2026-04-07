@@ -42,12 +42,25 @@ def manage_postrouting():
 def prerouting():
     iface_in = utils.pick_interface("in")
     if iface_in is None: return
-    port = ask_required("Select port from which to forward")
-    if port is None: return
-    des_ip = ask_required("Select destination IP address")
-    if des_ip is None: return
-    des_port = ask_required("Select port to which forward to")
-    if des_port is None: return
+
+    while True:
+        port = ask_required("Select port from which to forward")
+        if port is None: return
+        if utils.check_port(port): break
+        utils.log("Invalid port.", "error")     
+
+
+    while True:
+        des_ip = ask_required("Select destination IP address")
+        if des_ip is None: return
+        if utils.check_ip(des_ip): break
+        utils.log("Invalid IP.", "error")  
+
+    while True:
+        des_port = ask_required("Select port to which to forward")
+        if des_port is None: return
+        if utils.check_port(des_port): break
+        utils.log("Invalid port.", "error") 
     
     subprocess.run(["sudo", "iptables", "-t", "nat", "-A", "PREROUTING", "-i", iface_in, "-p", "tcp", "--dport", port, "-j", "DNAT", "--to-destination", f"{des_ip}:{des_port}"])
     utils.log(f"{iface_in}:{port} → {des_ip}:{des_port} (DNAT)", "success")

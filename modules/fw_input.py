@@ -12,18 +12,20 @@ def input_allow_port(port, proto="tcp"):
 
 
 def input_allow_custom():
-    try:
-        proto = input(f"{utils.WHITE}Protocol (tcp/udp): {utils.RESET}").lower()
-        if proto not in ("tcp", "udp"):
-            utils.log("Invalid protocol.", "error")
+    proto = utils.choose(["tcp", "udp"], "Choose protocol.")
+    if proto is None:
+        return
+
+    while True:
+        try:
+            port = input(f"{utils.WHITE}Port: {utils.RESET}")
+        except KeyboardInterrupt:
             return
-        port = input(f"{utils.WHITE}Port: {utils.RESET}")
-        if not port.isdigit():
-            utils.log("Invalid port.", "error")
+        if utils.check_port(port):
+            input_allow_port(port, proto)
             return
-        input_allow_port(port, proto)
-    except KeyboardInterrupt:
-        pass
+        utils.log("Invalid port.", "error")
+
 
 
 def input_add_rule():
