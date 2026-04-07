@@ -10,8 +10,9 @@ def masquerade():
     iface_out = utils.pick_interface("out")
     if iface_out is None:
         return
-    
-    cmd = ["sudo", "iptables", "-t", "nat", "-A", "POSTROUTING", "-o", iface_out, "-j", "MASQUERADE"]
+    src_ip = utils.ask_ip()
+    if src_ip: cmd = ["sudo", "iptables", "-t", "nat", "-A", "POSTROUTING", "-s", src_ip, "-o", iface_out, "-j", "MASQUERADE"]
+    else: cmd = ["sudo", "iptables", "-t", "nat", "-A", "POSTROUTING", "-o", iface_out, "-j", "MASQUERADE"]
     if rule_exists(cmd):
         utils.log("Rule already exists.", "info")
     else:
@@ -72,10 +73,12 @@ def prerouting():
         if des_port is None: return
         if utils.check_port(des_port): break
         utils.log("Invalid port.", "error") 
+
+    protocol = utils.choose(["tcp", "udp"], "Select protocol")
     
     dnat_cmd = ["sudo", "iptables", "-t", "nat", "-A", "PREROUTING", "-i", iface_in]
     if src_ip: dnat_cmd += ["-s", src_ip]
-    dnat_cmd +=  ["-p", "tcp", "--dport", port, "-j", "DNAT", "--to-destination", f"{des_ip}:{des_port}"]
+    dnat_cmd +=  ["-p", protocol, "--dport", port, "-j", "DNAT", "--to-destination", f"{des_ip}:{des_port}"]
 
     if rule_exists(dnat_cmd):
         utils.log("Rule already exists.", "info")
@@ -83,13 +86,13 @@ def prerouting():
         subprocess.run(dnat_cmd)
         utils.log(f"{iface_in}:{port} → {des_ip}:{des_port} (DNAT)", "success")
 
-    check_cmd = ["sudo", "iptables", "-C", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", "tcp", "--dport", des_port]
+    check_cmd = ["sudo", "iptables", "-C", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", protocol, "--dport", des_port]
     if src_ip: check_cmd += ["-s", src_ip]
     check_cmd += ["-j", "ACCEPT"]
     check = subprocess.run(check_cmd)
 
     if check.returncode == 1:
-        forward_cmd = ["sudo", "iptables", "-A", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", "tcp", "--dport", des_port]
+        forward_cmd = ["sudo", "iptables", "-A", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", protocol, "--dport", des_port]
         if src_ip: forward_cmd += ["-s", src_ip]
         forward_cmd += ["-j", "ACCEPT"]
 
