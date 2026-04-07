@@ -10,8 +10,9 @@ def masquerade():
     iface_out = utils.pick_interface("out")
     if iface_out is None:
         return
-    
-    cmd = ["sudo", "iptables", "-t", "nat", "-A", "POSTROUTING", "-o", iface_out, "-j", "MASQUERADE"]
+    src_ip = utils.ask_ip()
+    if src_ip: cmd = ["sudo", "iptables", "-t", "nat", "-A", "POSTROUTING", "-s", src_ip, "-o", iface_out, "-j", "MASQUERADE"]
+    else: cmd = ["sudo", "iptables", "-t", "nat", "-A", "POSTROUTING", "-o", iface_out, "-j", "MASQUERADE"]
     if rule_exists(cmd):
         utils.log("Rule already exists.", "info")
     else:
@@ -49,11 +50,17 @@ def prerouting():
     if iface_in is None: return
 
     while True:
+        src_ip = ask("Source IP/subnet (optional)")
+        if src_ip is None: return
+        if not src_ip or utils.check_ip(src_ip): break
+        utils.log("Invalid IP.", "error")
+
+
+    while True:
         port = ask_required("Select port from which to forward")
         if port is None: return
         if utils.check_port(port): break
         utils.log("Invalid port.", "error")     
-
 
     while True:
         des_ip = ask_required("Select destination IP address")
@@ -66,19 +73,35 @@ def prerouting():
         if des_port is None: return
         if utils.check_port(des_port): break
         utils.log("Invalid port.", "error") 
+
+    protocol = utils.choose(["tcp", "udp"], "Select protocol")
     
-    dnat_cmd = ["sudo", "iptables", "-t", "nat", "-A", "PREROUTING", "-i", iface_in, "-p", "tcp", "--dport", port, "-j", "DNAT", "--to-destination", f"{des_ip}:{des_port}"]
+    dnat_cmd = ["sudo", "iptables", "-t", "nat", "-A", "PREROUTING", "-i", iface_in]
+    if src_ip: dnat_cmd += ["-s", src_ip]
+    dnat_cmd +=  ["-p", protocol, "--dport", port, "-j", "DNAT", "--to-destination", f"{des_ip}:{des_port}"]
 
     if rule_exists(dnat_cmd):
         utils.log("Rule already exists.", "info")
     else:
         subprocess.run(dnat_cmd)
-        utils.log(f"{iface_in}:{port} → {des_ip}:{des_port} (DNAT)", "success")
+        utils.log(f"{iface_in}:{port} -> {des_ip}:{des_port} (DNAT)", "success")
 
-    check = subprocess.run(["sudo", "iptables", "-C", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", "tcp", "--dport", des_port, "-j", "ACCEPT"])
-    if check.returncode == 1:
-        subprocess.run(["sudo", "iptables", "-A", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", "tcp", "--dport", des_port, "-j", "ACCEPT"])
+    check_cmd = ["sudo", "iptables", "-C", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", protocol, "--dport", des_port]
+    if src_ip: check_cmd += ["-s", src_ip]
+    check_cmd += ["-j", "ACCEPT"]
+    check = subprocess.run(check_cmd, capture_output=True)
+
+    if check.returncode != 0:
+        forward_cmd = ["sudo", "iptables", "-A", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", protocol, "--dport", des_port]
+        if src_ip: forward_cmd += ["-s", src_ip]
+        forward_cmd += ["-j", "ACCEPT"]
+
+        subprocess.run(forward_cmd)
         utils.log(f"FORWARD rule added automatically for {des_ip}:{des_port}.", "info")
+    try:
+        input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+    except KeyboardInterrupt:
+        pass
 
     
 

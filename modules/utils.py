@@ -3,7 +3,8 @@ import shlex
 import subprocess
 from simple_term_menu import TerminalMenu
 import ipaddress
-
+from modules.fw_shared import ask
+ 
 # simple_term_menu cursor style (globally used)
 MENU_CURSOR_STYLE = ("fg_purple", "bold")
 
@@ -20,7 +21,12 @@ GRAY = "\033[38;5;240m"
 RESET = "\033[0m"
 PREFIX = f"{PURPLE}[Libux]{RESET}"
 
-
+def ask_ip():
+    while True:
+        src_ip = ask("Choose source ip / subnet")
+        if src_ip is None: return
+        if not src_ip or utils.check_ip(src_ip): break
+        log("Invalid IP/subnet.", "error")
 
 def check_ip(ip):
     try:

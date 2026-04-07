@@ -3,11 +3,20 @@ import subprocess
 import shlex
 import os
 from modules import utils
-from modules.fw_shared import remove_rule, show_chain, rule_exists
+from modules.fw_shared import remove_rule, show_chain, rule_exists, ask
 
 
 def input_allow_port(port, proto="tcp"):
-    cmd = ["sudo", "iptables", "-A", "INPUT", "-p", proto, "--dport", str(port), "-j", "ACCEPT"]
+    while True:
+        src_ip = ask("Choose source ip / subnet")
+        if src_ip is None: return
+        if not src_ip or utils.check_ip(src_ip): break
+        utils.log("Invalid IP/subnet.", "error")
+
+    if(src_ip):
+        cmd = ["sudo", "iptables", "-A", "INPUT", "-s", src_ip, "-p", proto, "--dport", str(port), "-j", "ACCEPT"]
+    else:
+        cmd = ["sudo", "iptables", "-A", "INPUT", "-p", proto, "--dport", str(port), "-j", "ACCEPT"]
     if rule_exists(cmd):
         utils.log("Rule already exists.", "info")
     else:
@@ -59,7 +68,16 @@ def input_add_rule():
             input_allow_port(80)
             input_allow_port(443)
         elif choice == 3:
-            icmp_cmd = ["sudo", "iptables", "-A", "INPUT", "-p", "icmp", "-j", "ACCEPT"]
+            while True:
+                src_ip = ask("Choose source ip / subnet")
+                if src_ip is None: return
+                if not src_ip or utils.check_ip(src_ip): break
+                utils.log("Invalid IP/subnet.", "error")
+            if src_ip:
+                icmp_cmd = ["sudo", "iptables", "-A", "INPUT", "-s", src_ip, "-p", "icmp", "-j", "ACCEPT"]
+            else:
+                icmp_cmd = ["sudo", "iptables", "-A", "INPUT", "-p", "icmp", "-j", "ACCEPT"]
+
             if rule_exists(icmp_cmd):
                 utils.log("Rule already exists.", "info")
             else:

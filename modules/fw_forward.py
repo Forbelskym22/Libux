@@ -67,12 +67,17 @@ def forward_allow_es_rel():
     if permission != "yes":
         return
 
+    src_ip = utils.ask_ip()
+    if src_ip is None: return
+
     iface_in  = utils.pick_interface("in")
     if iface_in is None: return
+    
     iface_out = utils.pick_interface("out")
     if iface_out is None: return
 
     cmd = ["sudo", "iptables", "-A", "FORWARD"]
+    if src_ip: cmd += ["-s", src_ip]
     if iface_in:  cmd += ["-i", iface_in]
     if iface_out: cmd += ["-o", iface_out]
     cmd += ["-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"]
