@@ -5,6 +5,7 @@ import os
 from modules import utils
 from modules.fw_shared import discard_changes, save_rules, ask, ask_required
 from modules.fw_input import manage_input_chain
+from modules.fw_output import manage_output_chain
 from modules.fw_forward import manage_forward_chain
 from modules.fw_nat import manage_prerouting, manage_postrouting
 
@@ -164,6 +165,7 @@ def show_firewall_menu():
         options = [
             "Default config (Wizard)",
             "INPUT Chain",
+            "OUTPUT Chain",
             "FORWARD Chain",
             "PREROUTING (DNAT / Port forwarding)",
             "POSTROUTING (MASQUERADE)",
@@ -182,19 +184,21 @@ def show_firewall_menu():
         elif choice == 1:
             manage_input_chain()
         elif choice == 2:
-            manage_forward_chain()
+            manage_output_chain()
         elif choice == 3:
-            manage_prerouting()
+            manage_forward_chain()
         elif choice == 4:
+            manage_prerouting()
+        elif choice == 5:
             manage_postrouting()
-        elif choice == 6:
-            show_firewall()
         elif choice == 7:
+            show_firewall()
+        elif choice == 8:
             save_rules()
             
-        elif choice == 8:
+        elif choice == 9:
             discard_changes()
-        elif choice == 9 or choice is None:
+        elif choice == 10 or choice is None:
             break
 
 
