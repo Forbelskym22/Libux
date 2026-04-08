@@ -3,6 +3,49 @@ import subprocess
 import os
 from modules import utils
 
+RULES_FILE = "/etc/iptables/rules.v4"
+
+def save_rules():
+    confirm = utils.choose(["yes", "no"], "Save current iptables rules?")
+    if confirm != "yes":
+        return
+    
+    if not utils.is_service_installed("iptables-save"):
+        utils.log("iptables-save not found.", "error")
+        return
+
+    os.makedirs("/etc/iptables", exist_ok=True)
+    result = subprocess.run(["sudo", "iptables-save"], capture_output=True, text=True)
+    with open(RULES_FILE, "w") as f:
+        f.write(result.stdout)
+    utils.log(f"Rules saved to {RULES_FILE}.", "success")
+
+    if not utils.is_service_installed("iptables-restore"):
+        install = utils.choose(["yes", "no"], "iptables-persistent not found. Install it?")
+        if install == "yes":
+            subprocess.run(["sudo", "apt-get", "install", "-y", "iptables-persistent"])
+
+    try:
+        input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+    except KeyboardInterrupt:
+        pass
+
+
+def discard_changes():
+    confirm = utils.choose(["yes","no"], f"Discrad changes and restore  from {RULES_FILE}?", "error")
+    if confirm != "yes":
+        return
+    if not os.path.exists(RULES_FILE):
+        utils.log(f"NO saved rules found at {RULES_FILE}.", "error")
+        return
+    subprocess.run(["sudo","iptables-restore", RULES_FILE])
+    utils.log("Rules restored.", "success")
+
+    try:
+        input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+    except KeyboardInterrupt:
+        pass
+
 def ensure_ip_forward():
     with open("/proc/sys/net/ipv4/ip_forward") as f:
         enabled = f.read().strip() == "1"
