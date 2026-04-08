@@ -24,7 +24,11 @@ def save_rules():
         install = utils.choose(["yes", "no"], "iptables-persistent not found. Install it?")
         if install == "yes":
             subprocess.run(["sudo", "apt-get", "install", "-y", "iptables-persistent"])
-
+    
+    if utils.is_service_installed("iptables-restore"):
+        subprocess.run(["sudo", "netfilter-persistent", "save"])
+        utils.log("Rules will persist across reboots.", "success")
+    
     try:
         input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
     except KeyboardInterrupt:
