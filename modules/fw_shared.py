@@ -3,6 +3,21 @@ import subprocess
 import os
 from modules import utils
 
+def ensure_ip_forward():
+    with open("/proc/sys/net/ipv4/ip_forward") as f:
+        enabled = f.read().strip() == "1"
+    if enabled:
+        return
+    
+    subprocess.run(["sysctl", "-w", "net.ipv4.ip_forward=1"])
+    utils.log("ip_forward enabled.", "success")
+
+    persist = utils.choose(["yes", "no"], "Make ip_forward persistent across reboots?")
+    if persist == "yes":
+        with open("/etc/systctl.d/99-libux.conf", "w") as f:
+            f.write("net.ipv4.ip_forward = 1\n")
+        utils.log("Saved to /etc/systctl.d/99-libux.conf", "success")
+
 def toggle_policy(chain):
     result = subprocess.run(["sudo", "iptables", "-L", chain, "--line-numbers", "-n"],capture_output=True, text=True)
     current = "DROP" if "policy DROP" in result.stdout else "ACCEPT"
