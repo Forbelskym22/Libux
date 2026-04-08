@@ -3,10 +3,10 @@ import subprocess
 import shlex
 import os
 from modules import utils
-from modules.fw_shared import remove_rule
+from modules.fw_shared import discard_changes, save_rules, ask, ask_required
 from modules.fw_input import manage_input_chain
 from modules.fw_forward import manage_forward_chain
-from modules.fw_nat import manage_prerouting, manage_postrouting, ask, ask_required
+from modules.fw_nat import manage_prerouting, manage_postrouting
 
 
 def show_firewall():
@@ -170,6 +170,7 @@ def show_firewall_menu():
             "",
             "Show",
             "Save",
+            "Discard",
             "Back"
         ]
 
@@ -189,9 +190,11 @@ def show_firewall_menu():
         elif choice == 6:
             show_firewall()
         elif choice == 7:
-            utils.log("Save function here...", "info")
-            input("\nPress Enter to continue...")
-        elif choice == 8 or choice is None:
+            save_rules()
+            
+        elif choice == 8:
+            discard_changes()
+        elif choice == 9 or choice is None:
             break
 
 

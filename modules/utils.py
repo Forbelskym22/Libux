@@ -25,7 +25,7 @@ def ask_ip():
     while True:
         src_ip = ask("Choose source ip / subnet")
         if src_ip is None: return
-        if not src_ip or utils.check_ip(src_ip): break
+        if not src_ip or check_ip(src_ip): break
         log("Invalid IP/subnet.", "error")
 
 def check_ip(ip):
