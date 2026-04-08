@@ -37,6 +37,7 @@ def discard_changes():
         return
     if not os.path.exists(RULES_FILE):
         utils.log(f"No saved rules found at {RULES_FILE}.", "error")
+
         return
     subprocess.run(["sudo","iptables-restore", RULES_FILE])
     utils.log("Rules restored.", "success")
