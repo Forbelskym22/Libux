@@ -3,10 +3,12 @@ import subprocess
 import shlex
 import os
 from modules import utils
-from modules.fw_shared import ask, ask_required, remove_rule, show_chain, rule_exists, flush_chain
+from modules.fw_shared import ask, ask_required, remove_rule, show_chain, rule_exists, flush_chain, ensure_ip_forward
 
 
 def masquerade():
+    ensure_ip_forward()
+
     iface_out = utils.pick_interface("out")
     if iface_out is None:
         return
@@ -49,6 +51,8 @@ def manage_postrouting():
             flush_chain("POSTROUTING", "nat")
 
 def prerouting():
+    ensure_ip_forward()
+    
     iface_in = utils.pick_interface("in")
     if iface_in is None: return
 
@@ -83,6 +87,7 @@ def prerouting():
     if src_ip: dnat_cmd += ["-s", src_ip]
     dnat_cmd +=  ["-p", protocol, "--dport", port, "-j", "DNAT", "--to-destination", f"{des_ip}:{des_port}"]
 
+    
     if rule_exists(dnat_cmd):
         utils.log("Rule already exists.", "info")
     else:
@@ -105,6 +110,7 @@ def prerouting():
         input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
     except KeyboardInterrupt:
         pass
+
 
     
 
