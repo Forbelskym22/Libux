@@ -175,6 +175,10 @@ def remove_rule(chain, table="filter"):
             return
 
         line_num = rules[choice][0]
+        utils.log(rules[choice][1], "info")
+        confirm = utils.choose(["yes", "no"], f"Remove rule {line_num} from {chain}?", "error")
+        if confirm != "yes":
+            continue
         cmd = ["sudo", "iptables", "-t", table, "-D", chain, line_num] if table != "filter" else ["sudo", "iptables", "-D", chain, line_num]
         subprocess.run(cmd)
         utils.log(f"Rule {line_num} removed from {chain}.", "success")
