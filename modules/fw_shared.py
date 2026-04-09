@@ -5,6 +5,26 @@ from modules import utils
 
 RULES_FILE = "/etc/iptables/rules.v4"
 
+def edit_rules():
+    os.makedirs("/etc/iptables", exist_ok=True)
+    result = subprocess.run(["sudo", "iptables-save"], capture_output=True, text=True)
+    with open(RULES_FILE, "w") as f:
+        f.write(result.stdout)
+
+    subprocess.run(["sudo", "nano", RULES_FILE])
+
+    apply = utils.choose(["yes","no"], "Apply changes from file?")
+    if apply == "yes":
+        result = subprocess.run(["sudo", "iptables-restore", RULES_FILE], capture_output=True, text=True)
+        if result.returncode == 0:
+            utils.log("Rules applied.", "success")
+        else:
+            utils.log(f"Failed to apply rules: {result.stderr.strip()}", "error")
+        try:
+            input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+        except KeyboardInterrupt:
+            pass
+
 def save_rules():
     confirm = utils.choose(["yes", "no"], "Save current iptables rules?")
     if confirm != "yes":
