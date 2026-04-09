@@ -3,7 +3,7 @@ import subprocess
 import shlex
 import os
 from modules import utils
-from modules.fw_shared import discard_changes, save_rules, ask, ask_required
+from modules.fw_shared import discard_changes, save_rules, edit_rules, ask, ask_required
 from modules.fw_input import manage_input_chain
 from modules.fw_output import manage_output_chain
 from modules.fw_forward import manage_forward_chain
@@ -163,17 +163,19 @@ def show_firewall_menu():
         utils.print_menu_name("Firewall Configuration (iptables)")
 
         options = [
-            "Default config (Wizard)",
-            "INPUT Chain",
-            "OUTPUT Chain",
-            "FORWARD Chain",
-            "PREROUTING (DNAT / Port forwarding)",
-            "POSTROUTING (MASQUERADE)",
-            "",
-            "Show",
-            "Save",
-            "Discard",
-            "Back"
+            "Default config (Wizard)",              # 0
+            "INPUT Chain",                          # 1
+            "OUTPUT Chain",                         # 2
+            "FORWARD Chain",                        # 3
+            "PREROUTING (DNAT / Port forwarding)",  # 4
+            "POSTROUTING (MASQUERADE)",             # 5
+            "",                                     # 6
+            "Show",                                 # 7
+            "Edit",                                 # 8
+            "",                                     # 9
+            "Save",                                 # 10
+            "Discard",                              # 11
+            "Back"                                  # 12
         ]
 
         menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
@@ -194,11 +196,13 @@ def show_firewall_menu():
         elif choice == 7:
             show_firewall()
         elif choice == 8:
+            edit_rules()
+        elif choice == 10:
             save_rules()
             
-        elif choice == 9:
+        elif choice == 11:
             discard_changes()
-        elif choice == 10 or choice is None:
+        elif choice == 12 or choice is None:
             break
 
 

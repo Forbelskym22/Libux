@@ -4,6 +4,55 @@ import os
 from modules import utils
 
 RULES_FILE = "/etc/iptables/rules.v4"
+RULES_BACKUP = "/etc/iptables/rules.v4.bak"
+
+def edit_rules():
+    if not utils.is_service_installed("nano"):
+        utils.log("Nano is not installed.")
+        confirm = utils.choose(["yes", "no"], "Install nano?")
+        if confirm != "yes":
+            return
+        subprocess.run(["sudo", "apt", "install", "nano", "-y"])
+
+        try:
+            input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+        except KeyboardInterrupt:
+            pass
+        
+
+    os.makedirs("/etc/iptables", exist_ok=True)
+    
+    current = subprocess.run(["sudo", "iptables-save"], capture_output=True, text=True).stdout
+    
+    # open the rules file
+    with open(RULES_FILE, "w") as f:
+        f.write(current)
+
+    # open backup rules file
+    with open(RULES_BACKUP, "w") as f:
+        f.write(current)
+
+    subprocess.run(["sudo", "nano", RULES_FILE])
+
+    apply = utils.choose(["yes","no"], "Apply changes from file?")
+    if apply == "yes":
+        
+        result = subprocess.run(["sudo", "iptables-restore", RULES_FILE], capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            utils.log("Rules applied.", "success")
+        else:
+            utils.log(f"Failed to apply rules: {result.stderr.strip()}", "error")
+            restore = utils.choose(["yes","no"], f"Restore backup from {RULES_BACKUP}?", "error")
+            if restore != "yes":
+                return
+            subprocess.run(["sudo", "iptables-restore", RULES_BACKUP])
+            utils.log("Backup restored.", "success")
+        
+        try:
+            input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+        except KeyboardInterrupt:
+            pass
 
 def save_rules():
     confirm = utils.choose(["yes", "no"], "Save current iptables rules?")
