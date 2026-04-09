@@ -23,6 +23,7 @@ def masquerade():
 
 
 def manage_postrouting():
+    last = 0
     while True:
         os.system('clear')
         utils.print_menu_name("Firewall > POSTROUTING (NAT)")
@@ -36,7 +37,7 @@ def manage_postrouting():
             "Flush"
         ]
 
-        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
+        menu = TerminalMenu(options,cursor_index=last, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
         choice = utils.show_menu(menu)
 
         if choice == 0:
@@ -49,6 +50,8 @@ def manage_postrouting():
             break
         elif choice == 5:
             flush_chain("POSTROUTING", "nat")
+
+        last = choice
 
 def prerouting():
     ensure_ip_forward()
@@ -116,6 +119,7 @@ def prerouting():
 
 
 def manage_prerouting():
+    last = 0
     while True:
         os.system('clear')
         utils.print_menu_name("Firewall > PREROUTING (DNAT)")
@@ -129,7 +133,7 @@ def manage_prerouting():
             "Flush"
         ]
 
-        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
+        menu = TerminalMenu(options,cursor_index=last, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
         choice = utils.show_menu(menu)
 
         if choice == 0:
@@ -142,3 +146,5 @@ def manage_prerouting():
             break
         elif choice == 5:
             flush_chain("PREROUTING", "nat")
+        
+        last = choice

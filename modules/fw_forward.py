@@ -130,6 +130,7 @@ def forward_add_rule():
 
 
 def manage_forward_chain():
+    last = 0
     while True:
         os.system('clear')
         utils.print_menu_name("Firewall > FORWARD Chain")
@@ -145,7 +146,7 @@ def manage_forward_chain():
             "Back"
         ]
 
-        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
+        menu = TerminalMenu(options,cursor_index=last, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
         choice = utils.show_menu(menu)
 
         if choice == 0:
@@ -168,3 +169,5 @@ def manage_forward_chain():
             show_chain("FORWARD")
         elif choice == 7 or choice is None:
             break
+
+        last = choice
