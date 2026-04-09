@@ -158,6 +158,7 @@ def setup_secure_baseline():
 
 
 def show_firewall_menu():
+    last = 0
     while True:
         os.system('clear')
         utils.print_menu_name("Firewall Configuration (iptables)")
@@ -178,7 +179,7 @@ def show_firewall_menu():
             "Back"                                  # 12
         ]
 
-        menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
+        menu = TerminalMenu(options,cursor_index=last, cycle_cursor=True, clear_screen=False, skip_empty_entries=True, menu_cursor_style=utils.MENU_CURSOR_STYLE)
         choice = utils.show_menu(menu)
 
         if choice == 0:
@@ -204,6 +205,8 @@ def show_firewall_menu():
             discard_changes()
         elif choice == 12 or choice is None:
             break
+
+        last = choice
 
 
 def show_firewall_installation_menu():
