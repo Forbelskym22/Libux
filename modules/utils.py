@@ -30,7 +30,11 @@ word_colors = {
         "lo": YELLOW
     }
 
+VERBOSE = False
+
 def run_cmd(cmd):
+    if VERBOSE:
+        log(f"Running: {' '.join(cmd)}", "info")
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         log(f"Command failed: {result.stderr.strip()}", "error")
