@@ -1,6 +1,5 @@
 from simple_term_menu import TerminalMenu
 import subprocess
-import shlex
 import os
 from modules import utils
 from modules.fw_shared import discard_changes, save_rules, edit_rules, ask, ask_required, show_chain
@@ -74,9 +73,9 @@ def setup_secure_baseline():
         utils.log("Applying core rules...", "info")
 
         core_commands = [
-            "sudo iptables -F INPUT",
-            "sudo iptables -A INPUT -i lo -j ACCEPT",
-            "sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT",
+            ["sudo", "iptables", "-F", "INPUT"],
+            ["sudo", "iptables", "-A", "INPUT", "-i", "lo", "-j", "ACCEPT"],
+            ["sudo", "iptables", "-A", "INPUT", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "-j", "ACCEPT"],
         ]
 
         if allow_ssh == "yes" and ssh_port:
@@ -99,10 +98,10 @@ def setup_secure_baseline():
             pass
 
         for cmd in core_commands:
-            subprocess.run(shlex.split(cmd))
+            subprocess.run(cmd)
 
-        subprocess.run(shlex.split("sudo iptables -P INPUT DROP"))
-        subprocess.run(shlex.split("sudo iptables -P FORWARD DROP"))
+        subprocess.run(["sudo", "iptables", "-P", "INPUT", "DROP"])
+        subprocess.run(["sudo", "iptables", "-P", "FORWARD", "DROP"])
 
         utils.log("Baseline applied! Policy set to DROP.", "success")
         try:

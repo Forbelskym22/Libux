@@ -1,5 +1,4 @@
 import shutil
-import shlex
 import subprocess
 from simple_term_menu import TerminalMenu
 import ipaddress
@@ -52,7 +51,8 @@ def choose(options, message="", type= "info"):
 
 
 def pick_interface(text =""):
-    result = subprocess.run(shlex.split("ip -o link show"), capture_output=True, text=True)
+    cmd = ["ip", "-o", "link", "show"]
+    result = subprocess.run(cmd, capture_output=True, text=True)
     interfaces = [line.split()[1].strip(":") for line in result.stdout.splitlines()]
     
 

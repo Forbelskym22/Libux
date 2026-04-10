@@ -1,6 +1,5 @@
 from simple_term_menu import TerminalMenu
 import subprocess
-import shlex
 import os
 from modules import utils
 from modules.fw_shared import ask, ask_required, remove_rule, show_chain, rule_exists, flush_chain, ensure_ip_forward
