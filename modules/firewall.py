@@ -95,10 +95,11 @@ def setup_secure_baseline():
             pass
 
         for cmd in core_commands:
-            subprocess.run(cmd)
+            utils.run_cmd(cmd)
 
-        subprocess.run(["sudo", "iptables", "-P", "INPUT", "DROP"])
-        subprocess.run(["sudo", "iptables", "-P", "FORWARD", "DROP"])
+        utils.run_cmd(["sudo", "iptables", "-P", "INPUT", "DROP"])
+        utils.run_cmd(["sudo", "iptables", "-P", "FORWARD", "DROP"])
+
 
         utils.log("Baseline applied! Policy set to DROP.", "success")
         

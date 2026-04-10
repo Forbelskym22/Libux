@@ -30,6 +30,13 @@ word_colors = {
         "lo": YELLOW
     }
 
+def run_cmd(cmd):
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        log(f"Command failed: {result.stderr.strip()}", "error")
+        return False
+    return True
+
 def ask(prompt):
     try:
         return input(f"{WHITE}{prompt}{GRAY} (Enter to skip): {RESET}").strip()

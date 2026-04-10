@@ -55,7 +55,7 @@ def forward_allow_traffic():
     if rule_exists(cmd):
         utils.log("Rule already exists.", "info")
     else:
-        subprocess.run(cmd)
+        utils.run_cmd(cmd)
         utils.log("Forward rule added.", "success")
     
 
@@ -85,7 +85,7 @@ def forward_allow_es_rel():
     if rule_exists(cmd):
         utils.log("Rule already exists.", "info")
     else:
-        subprocess.run(cmd)
+        utils.run_cmd(cmd)
         utils.log("Established/related traffic allowed on FORWARD.", "success")
 
 
@@ -115,7 +115,7 @@ def forward_add_rule():
             if rule_exists(cmd):
                 utils.log("Rule already exists.", "info")
             else:
-                subprocess.run(cmd)
+                utils.run_cmd(cmd)
                 utils.log("ICMP (ping) allowed on FORWARD.", "success")
                     
         elif choice == 4 or choice is None:

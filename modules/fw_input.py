@@ -19,7 +19,7 @@ def input_allow_port(port, proto="tcp"):
     if rule_exists(cmd):
         utils.log("Rule already exists.", "info")
     else:
-        subprocess.run(cmd)
+        utils.run_cmd(cmd)
         utils.log(f"Allowed {proto.upper()} port {port} on INPUT.", "success")
 
 
@@ -80,7 +80,7 @@ def input_add_rule():
             if rule_exists(icmp_cmd):
                 utils.log("Rule already exists.", "info")
             else:
-                subprocess.run(icmp_cmd)
+                utils.run_cmd(icmp_cmd)
                 utils.log("ICMP (ping) allowed on INPUT.", "success")
 
         elif choice == 4:
