@@ -19,17 +19,17 @@ A text-based interface application designed for basic configuration of a Linux s
 - Root permissions
 
 ## Installation
-```bash
+```
 git clone https://github.com/Forbelskym22/Libux.git
-pip install -r requirements.txt
-python main.py
+cd Libux
+sudo ./install.sh
 ```
 
 ## Usage
 ```bash
-sudo python main.py
+sudo ./start.sh
 ```
-> Root permissions are required for most features.
+> Root permissions are required.
 
 ## License
 MIT
