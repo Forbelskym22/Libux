@@ -3,66 +3,26 @@ import subprocess
 import shlex
 import os
 from modules import utils
-from modules.fw_shared import discard_changes, save_rules, edit_rules, ask, ask_required
+from modules.fw_shared import discard_changes, save_rules, edit_rules, ask, ask_required, show_chain
 from modules.fw_input import manage_input_chain
 from modules.fw_output import manage_output_chain
 from modules.fw_forward import manage_forward_chain
 from modules.fw_nat import manage_prerouting, manage_postrouting
 
 
+
+
 def show_firewall():
     os.system('clear')
     utils.print_menu_name("Firewall rules")
 
-    word_colors = {
-        "INPUT": utils.PINK,
-        "FORWARD": utils.PINK,
-        "OUTPUT": utils.PINK,
-        "ACCEPT": utils.GREEN,
-        "DROP": utils.RED,
-        "REJECT": utils.RED,
-        "policy": utils.PURPLE,
-        "all": utils.GRAY,
-        "tcp": utils.WHITE,
-        "udp": utils.WHITE,
-        "icmp": utils.WHITE,
-        "lo": utils.YELLOW
-    }
+    for chain in ["INPUT", "FORWARD", "OUTPUT"]:
+        show_chain(chain, clear=False, pause=False)
 
-    filter_result = subprocess.run(["sudo", "iptables", "-L", "-v", "-t", "filter"], capture_output=True, text=True)
-    nat_result = subprocess.run(["sudo", "iptables", "-L", "-v", "-t", "nat"], capture_output=True, text=True)
-    for line in filter_result.stdout.splitlines():
-        if line.startswith("Chain"):
-            colored = " ".join(
-                f"{utils.GREEN}{w}{utils.RESET}" if w == "ACCEPT" else
-                f"{utils.RED}{w}{utils.RESET}" if w in ("DROP", "REJECT") else
-                f"{utils.PINK}{w}{utils.RESET}"
-                for w in line.split(" ")
-            )
-            print(colored)
-        else:
-            colored = " ".join(
-                f"{word_colors[w]}{w}{utils.RESET}" if w in word_colors else w
-                for w in line.split(" ")
-            )
-            print(colored)
+    print(f"{utils.PURPLE}--- NAT table ---{utils.RESET}\n")
 
-    print(f"\n{utils.PURPLE}--- NAT table ---{utils.RESET}")
-    for line in nat_result.stdout.splitlines():
-        if line.startswith("Chain"):
-            colored = " ".join(
-                f"{utils.GREEN}{w}{utils.RESET}" if w == "ACCEPT" else
-                f"{utils.RED}{w}{utils.RESET}" if w in ("DROP", "REJECT") else
-                f"{utils.PINK}{w}{utils.RESET}"
-                for w in line.split(" ")
-            )
-            print(colored)
-        else:
-            colored = " ".join(
-                f"{word_colors[w]}{w}{utils.RESET}" if w in word_colors else w
-                for w in line.split(" ")
-            )
-            print(colored)
+    for chain in ["PREROUTING", "POSTROUTING", "INPUT", "OUTPUT"]:
+        show_chain(chain, table="nat", clear=False, pause=False)
 
     try:
         input("\nPress Enter to return to menu...")

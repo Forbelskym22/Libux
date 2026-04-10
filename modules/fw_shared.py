@@ -155,13 +155,14 @@ def ask_required(prompt):
         return None
 
 
-def show_chain(chain, table="filter"):
+def show_chain(chain, table="filter",clear=True, pause=True):
     cmd = ["sudo", "iptables", "--line-numbers", "-n", "-v", "-L", chain, "-t", table]
     result = subprocess.run(cmd, capture_output=True, text=True)
     lines = result.stdout.splitlines()
 
-    os.system('clear')
-    utils.print_menu_name(f" {chain} ")
+    if clear:
+        os.system('clear')
+        utils.print_menu_name(f" {chain} ")
 
     word_colors = {
         "ACCEPT": utils.GREEN,
@@ -174,20 +175,41 @@ def show_chain(chain, table="filter"):
         "lo": utils.YELLOW
     }
 
-    for l in lines:
-        if not l.strip():
-            continue
+    if lines:
+        words = lines[0].split()
         colored = " ".join(
-            f"{word_colors[w]}{w}{utils.RESET}" 
-            if w in word_colors 
-            else w for w in l.split(" ")
+            f"{utils.GREEN}{w}{utils.RESET}" if w =="ACCEPT" else 
+            f"{utils.RED}{w}{utils.RESET}" if w == "DROP" else
+            f"{word_colors.get(w, utils.PINK)}{w}{utils.RESET}"
+            for w in words
         )
         print(colored)
+        print()
+    
+    rows = [l.split() for l in lines[1:] if l.strip()]
+    if rows:
+        col_count = max(len(r) for r in rows)
+        col_widths = [0] * col_count
+        for row in rows:
+            for i, cell in enumerate(row):
+                if i < col_count:
+                    col_widths[i] = max(col_widths[i], len(cell))
+        for row in rows:
+            parts = []
+            for i, cell in enumerate(row):
+                color = word_colors.get(cell,"")
+                reset = utils.RESET if color else ""
+                pad = col_widths[i] - len(cell) if i < len(col_widths) - 1 else 0
+                parts.append(f"{color}{cell}{reset}{' ' * pad}")
+            print("  ".join(parts))
+    
+    print()
 
-    try:
-        input("\nPress Enter to continue...")
-    except KeyboardInterrupt:
-        pass
+    if pause:
+        try:
+            input("\nPress Enter to continue...")
+        except KeyboardInterrupt:
+            pass
 
 def remove_rule(chain, table="filter"):
     while True:
