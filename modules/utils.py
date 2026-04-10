@@ -2,7 +2,7 @@ import shutil
 import subprocess
 from simple_term_menu import TerminalMenu
 import ipaddress
- 
+
 # simple_term_menu cursor style (globally used)
 MENU_CURSOR_STYLE = ("fg_purple", "bold")
 
@@ -30,12 +30,19 @@ word_colors = {
         "lo": YELLOW
     }
 
+def run_cmd(cmd):
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        log(f"Command failed: {result.stderr.strip()}", "error")
+        return False
+    return True
+
 def ask(prompt):
     try:
         return input(f"{WHITE}{prompt}{GRAY} (Enter to skip): {RESET}").strip()
     except KeyboardInterrupt:
         return None
-    
+
 def ask_required(prompt):
     while True:
         try:
@@ -54,13 +61,13 @@ def pause():
     except KeyboardInterrupt:
         pass
 
-def ask_ip():
+def ask_ip(msg="IP/subnet"):
     while True:
-        src_ip = ask("Choose source ip / subnet")
+        src_ip = ask(msg)
         if src_ip is None: return
         if not src_ip or check_ip(src_ip): return src_ip
         log("Invalid IP/subnet.", "error")
-        
+
 
 def check_ip(ip):
     try:
@@ -89,7 +96,7 @@ def pick_interface(text =""):
     cmd = ["ip", "-o", "link", "show"]
     result = subprocess.run(cmd, capture_output=True, text=True)
     interfaces = [line.split()[1].strip(":") for line in result.stdout.splitlines()]
-    
+
 
     message = "choose interface"
     if text != "":

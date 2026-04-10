@@ -2,25 +2,13 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import remove_rule, show_chain, rule_exists, flush_chain, toggle_policy
+from modules.fw_shared import remove_rule, show_chain, rule_exists, ask, flush_chain, toggle_policy, allow_port, allow_icmp
 
 
 def output_allow_port(port, proto="tcp"):
-    while True:
-        des_ip = utils.ask("Choose destination ip / subnet")
-        if des_ip is None: return
-        if not des_ip or utils.check_ip(des_ip): break
-        utils.log("Invalid IP/subnet.", "error")
-
-    if(des_ip):
-        cmd = ["sudo", "iptables", "-A", "OUTPUT", "-d", des_ip, "-p", proto, "--dport", str(port), "-j", "ACCEPT"]
-    else:
-        cmd = ["sudo", "iptables", "-A", "OUTPUT", "-p", proto, "--dport", str(port), "-j", "ACCEPT"]
-    if rule_exists(cmd):
-        utils.log("Rule already exists.", "info")
-    else:
-        subprocess.run(cmd)
-        utils.log(f"Allowed {proto.upper()} port {port} on OUTPUT.", "success")
+    dst_ip = utils.ask_ip("Destination IP/subnet to allow")
+    if dst_ip is None: return
+    allow_port("OUTPUT", port, proto, dst_ip=dst_ip or None)
 
 
 
@@ -67,21 +55,10 @@ def output_add_rule():
             output_allow_port(80)
             output_allow_port(443)
         elif choice == 3:
-            while True:
-                des_ip = utils.ask("Choose destination ip / subnet")
-                if des_ip is None: return
-                if not des_ip or utils.check_ip(des_ip): break
-                utils.log("Invalid IP/subnet.", "error")
-            if des_ip:
-                icmp_cmd = ["sudo", "iptables", "-A", "OUTPUT", "-d", des_ip, "-p", "icmp", "-j", "ACCEPT"]
-            else:
-                icmp_cmd = ["sudo", "iptables", "-A", "OUTPUT", "-p", "icmp", "-j", "ACCEPT"]
-
-            if rule_exists(icmp_cmd):
-                utils.log("Rule already exists.", "info")
-            else:
-                subprocess.run(icmp_cmd)
-                utils.log("ICMP (ping) allowed on OUTPUT.", "success")
+            des_ip = utils.ask_ip("Destination IP/subnet to allow ICMP to")
+            if des_ip is None: return
+            allow_icmp("OUTPUT", dst_ip=des_ip or None)
+                
 
         elif choice == 4:
             output_allow_custom()
@@ -90,7 +67,10 @@ def output_add_rule():
         
 
         if choice in (0, 1, 2, 3, 4):
-            utils.pause()
+            try:
+                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+            except KeyboardInterrupt:
+                pass
 
 
 def manage_output_chain():
@@ -117,12 +97,18 @@ def manage_output_chain():
             output_add_rule()
         elif choice == 1:
             remove_rule("OUTPUT")
-            utils.pause()
+            try:
+                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+            except KeyboardInterrupt:
+                pass
         elif choice == 3:
             flush_chain("OUTPUT")
         elif choice == 4:
             toggle_policy("OUTPUT")
-            utils.pause()
+            try:
+                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+            except KeyboardInterrupt:
+                pass
         elif choice == 6:
             show_chain("OUTPUT")
         elif choice == 7 or choice is None:

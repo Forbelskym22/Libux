@@ -2,7 +2,7 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import remove_rule, show_chain, rule_exists, flush_chain, toggle_policy
+from modules.fw_shared import remove_rule, show_chain, rule_exists, flush_chain, toggle_policy, allow_icmp
 
 
 def forward_allow_traffic():
@@ -14,7 +14,7 @@ def forward_allow_traffic():
     iface_out = utils.pick_interface("out")
     if iface_out is None: return
     
-    src = utils.ask("Source IP/subnet (e.g. 192.168.1.0/24)")
+    src = ask("Source IP/subnet (e.g. 192.168.1.0/24)")
 
     if src is None: return
 
@@ -22,7 +22,7 @@ def forward_allow_traffic():
         utils.log("Invalid IP.", "error")
         return
     
-    dst = utils.ask("Destination IP/subnet (e.g. 10.0.0.5)")
+    dst = ask("Destination IP/subnet (e.g. 10.0.0.5)")
 
     if dst is None: return
 
@@ -37,7 +37,7 @@ def forward_allow_traffic():
 
     port = ""
     if proto in ("tcp", "udp"):
-        port = utils.ask("Destination port")
+        port = ask("Destination port")
         if port is None: return
 
     cmd = ["sudo", "iptables", "-A", "FORWARD"]
@@ -67,7 +67,7 @@ def forward_allow_es_rel():
     if permission != "yes":
         return
 
-    src_ip = utils.ask_ip()
+    src_ip = utils.ask_ip("Source IP/subnet to allow established/related from")
     if src_ip is None: return
 
     iface_in  = utils.pick_interface("in")
@@ -111,19 +111,17 @@ def forward_add_rule():
         elif choice == 1:
             forward_allow_es_rel()
         elif choice == 2:
-            cmd = ["sudo", "iptables", "-A", "FORWARD", "-p", "icmp", "-j", "ACCEPT"]
-            if rule_exists(cmd):
-                utils.log("Rule already exists.", "info")
-            else:
-                subprocess.run(cmd)
-                utils.log("ICMP (ping) allowed on FORWARD.", "success")
+            allow_icmp("FORWARD")
                     
         elif choice == 4 or choice is None:
             break
         
 
         if choice in (0, 1, 2):
-            utils.pause()
+            try:
+                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+            except KeyboardInterrupt:
+                pass
 
 
 def manage_forward_chain():
@@ -150,12 +148,18 @@ def manage_forward_chain():
             forward_add_rule()
         elif choice == 1:
             remove_rule("FORWARD")
-            utils.pause()
+            try:
+                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+            except KeyboardInterrupt:
+                pass
         elif choice == 3:
             flush_chain("FORWARD")
         elif choice == 4:
             toggle_policy("FORWARD")
-            utils.pause()
+            try:
+                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+            except KeyboardInterrupt:
+                pass
         elif choice == 6:
             show_chain("FORWARD")
         elif choice == 7 or choice is None:

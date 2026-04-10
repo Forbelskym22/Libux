@@ -7,6 +7,32 @@ import re
 RULES_FILE = "/etc/iptables/rules.v4"
 RULES_BACKUP = "/etc/iptables/rules.v4.bak"
 
+def allow_port(chain, port, proto="tcp", src_ip=None, dst_ip=None):
+    cmd = ["sudo", "iptables", "-A", chain]
+    if src_ip:
+        cmd += ["-s", src_ip]
+    if dst_ip:
+        cmd += ["-d", dst_ip]
+    cmd += ["-p", proto, "--dport", str(port), "-j", "ACCEPT"]
+    if rule_exists(cmd):
+        utils.log("Rule already exists", "info")
+    else:
+        utils.run_cmd(cmd)
+        utils.log(f"Allowed {proto.upper()} port {port} on {chain}.", "success")
+
+def allow_icmp(chain, src_ip=None, dst_ip=None):
+    cmd = ["sudo", "iptables", "-A", chain]
+    if src_ip:
+        cmd += ["-s", src_ip]
+    if dst_ip:
+        cmd += ["-d", dst_ip]
+    cmd += ["-p", "icmp", "-j", "ACCEPT"]
+    if rule_exists(cmd):
+        utils.log("Rule already exists", "info")
+    else:
+        utils.run_cmd(cmd)
+        utils.log(f"ICMP allowed on {chain}.", "success")
+
 def valid_log_prefix(prefix):
     return len(prefix) <= 29 and '"' not in prefix and "'" not in prefix
 
@@ -17,7 +43,7 @@ def toggle_log_rule(chain):
     check = subprocess.run(["sudo", "iptables", "-C", chain, "-j", "LOG"], capture_output=True)
 
     if check.returncode == 0:
-        subprocess.run(["sudo", "iptables", "-D", chain, "-j", "LOG"])
+        utils.run_cmd(["sudo", "iptables", "-D", chain, "-j", "LOG"])
         utils.log(f"Logging disabled on {chain}.", "success")
         return
     
@@ -47,7 +73,7 @@ def toggle_log_rule(chain):
     if prefix:
         cmd += ["--log-prefix", prefix]
         
-    subprocess.run(cmd)
+    utils.run_cmd(cmd)
     utils.log(f"Logging enabled on {chain}.", "success")
     
 
@@ -89,7 +115,7 @@ def edit_rules():
             restore = utils.choose(["yes","no"], f"Restore backup from {RULES_BACKUP}?", "error")
             if restore != "yes":
                 return
-            subprocess.run(["sudo", "iptables-restore", RULES_BACKUP])
+            utils.run_cmd(["sudo", "iptables-restore", RULES_BACKUP])
             utils.log("Backup restored.", "success")
         
         utils.pause()
@@ -115,7 +141,7 @@ def save_rules():
             subprocess.run(["sudo", "apt-get", "install", "-y", "iptables-persistent"])
     
     if utils.is_binary_installed("iptables-restore"):
-        subprocess.run(["sudo", "netfilter-persistent", "save"])
+        utils.run_cmd(["sudo", "netfilter-persistent", "save"])
         utils.log("Rules will persist across reboots.", "success")
     
     utils.pause()
@@ -129,7 +155,7 @@ def discard_changes():
         utils.log(f"No saved rules found at {RULES_FILE}.", "error")
 
         return
-    subprocess.run(["sudo","iptables-restore", RULES_FILE])
+    utils.run_cmd(["sudo","iptables-restore", RULES_FILE])
     utils.log("Rules restored.", "success")
 
     utils.pause()
@@ -140,7 +166,7 @@ def ensure_ip_forward():
     if enabled:
         return
     
-    subprocess.run(["sysctl", "-w", "net.ipv4.ip_forward=1"])
+    utils.run_cmd(["sysctl", "-w", "net.ipv4.ip_forward=1"])
     utils.log("ip_forward enabled.", "success")
 
     persist = utils.choose(["yes", "no"], "Make ip_forward persistent across reboots?")
@@ -157,7 +183,7 @@ def toggle_policy(chain):
     confirm = utils.choose(["yes","no"], f"WARNING: change {chain} policy {current} -> {new_policy}?", "error")
     if confirm !="yes":
         return
-    subprocess.run(["sudo", "iptables", "-P", chain, new_policy])
+    utils.run_cmd(["sudo", "iptables", "-P", chain, new_policy])
     utils.log(f"{chain} policy: {current} -> {new_policy}", "success")
 
     if new_policy == "DROP":
@@ -172,7 +198,7 @@ def flush_chain(chain, table="filter"):
     cmd = ["sudo","iptables","-F", chain]
     if table != "filter":
         cmd += ["-t", table]
-    subprocess.run(cmd)
+    utils.run_cmd(cmd)
     utils.log(f"{chain} flushed.", "success")
 
 
@@ -264,5 +290,5 @@ def remove_rule(chain, table="filter"):
         if confirm != "yes":
             continue
         cmd = ["sudo", "iptables", "-t", table, "-D", chain, line_num] if table != "filter" else ["sudo", "iptables", "-D", chain, line_num]
-        subprocess.run(cmd)
+        utils.run_cmd(cmd)
         utils.log(f"Rule {line_num} removed from {chain}.", "success")

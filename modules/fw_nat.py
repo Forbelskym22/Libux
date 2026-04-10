@@ -11,13 +11,13 @@ def masquerade():
     iface_out = utils.pick_interface("out")
     if iface_out is None:
         return
-    src_ip = utils.ask_ip()
+    src_ip = utils.ask_ip("Source IP/subnet for masquerading")
     if src_ip: cmd = ["sudo", "iptables", "-t", "nat", "-A", "POSTROUTING", "-s", src_ip, "-o", iface_out, "-j", "MASQUERADE"]
     else: cmd = ["sudo", "iptables", "-t", "nat", "-A", "POSTROUTING", "-o", iface_out, "-j", "MASQUERADE"]
     if rule_exists(cmd):
         utils.log("Rule already exists.", "info")
     else:
-        subprocess.run(cmd)
+        utils.run_cmd(cmd)
         utils.log(f"Masquerade applied on interface {iface_out}.", "success")
 
 
@@ -95,7 +95,7 @@ def prerouting():
         utils.log("Rule already exists.", "info")
     else:
 
-        result = subprocess.run(dnat_cmd)
+        result = subprocess.run(dnat_cmd, capture_output=True, text=True)
         if result.returncode != 0:
             utils.log("Failed to add DNAT rule", "error")
             utils.pause()
@@ -112,7 +112,7 @@ def prerouting():
             if src_ip: forward_cmd += ["-s", src_ip]
             forward_cmd += ["-j", "ACCEPT"]
 
-            subprocess.run(forward_cmd)
+            utils.run_cmd(forward_cmd)
             utils.log(f"FORWARD rule added automatically for {des_ip}:{des_port}.", "info")
         utils.pause()
 
