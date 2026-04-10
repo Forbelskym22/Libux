@@ -23,7 +23,7 @@ def toggle_log_rule(chain):
     
     while True:
         try:
-            prefix = ask("Log prefix max 29 chars")
+            prefix = utils.ask("Log prefix max 29 chars")
         except KeyboardInterrupt:
             return
         if not prefix or valid_log_prefix(prefix):
@@ -32,7 +32,7 @@ def toggle_log_rule(chain):
 
     while True:
         try:
-            limit = ask("Rate limit e.g. 5/min")
+            limit = utils.ask("Rate limit e.g. 5/min")
         except KeyboardInterrupt:
             return
         if not limit or valid_log_limit(limit):
@@ -53,17 +53,14 @@ def toggle_log_rule(chain):
 
 
 def edit_rules():
-    if not utils.is_service_installed("nano"):
+    if not utils.is_binary_installed("nano"):
         utils.log("Nano is not installed.")
         confirm = utils.choose(["yes", "no"], "Install nano?")
         if confirm != "yes":
             return
         subprocess.run(["sudo", "apt", "install", "nano", "-y"])
 
-        try:
-            input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-        except KeyboardInterrupt:
-            pass
+        utils.pause()
         
 
     os.makedirs("/etc/iptables", exist_ok=True)
@@ -95,17 +92,14 @@ def edit_rules():
             subprocess.run(["sudo", "iptables-restore", RULES_BACKUP])
             utils.log("Backup restored.", "success")
         
-        try:
-            input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-        except KeyboardInterrupt:
-            pass
+        utils.pause()
 
 def save_rules():
     confirm = utils.choose(["yes", "no"], "Save current iptables rules?")
     if confirm != "yes":
         return
     
-    if not utils.is_service_installed("iptables-save"):
+    if not utils.is_binary_installed("iptables-save"):
         utils.log("iptables-save not found.", "error")
         return
 
@@ -115,23 +109,20 @@ def save_rules():
         f.write(result.stdout)
     utils.log(f"Rules saved to {RULES_FILE}.", "success")
 
-    if not utils.is_service_installed("iptables-restore"):
+    if not utils.is_binary_installed("iptables-restore"):
         install = utils.choose(["yes", "no"], "iptables-persistent not found. Install it?")
         if install == "yes":
             subprocess.run(["sudo", "apt-get", "install", "-y", "iptables-persistent"])
     
-    if utils.is_service_installed("iptables-restore"):
+    if utils.is_binary_installed("iptables-restore"):
         subprocess.run(["sudo", "netfilter-persistent", "save"])
         utils.log("Rules will persist across reboots.", "success")
     
-    try:
-        input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-    except KeyboardInterrupt:
-        pass
+    utils.pause()
 
 
 def discard_changes():
-    confirm = utils.choose(["yes","no"], f"Discrad changes and restore  from {RULES_FILE}?", "error")
+    confirm = utils.choose(["yes","no"], f"Discard changes and restore  from {RULES_FILE}?", "error")
     if confirm != "yes":
         return
     if not os.path.exists(RULES_FILE):
@@ -141,10 +132,7 @@ def discard_changes():
     subprocess.run(["sudo","iptables-restore", RULES_FILE])
     utils.log("Rules restored.", "success")
 
-    try:
-        input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-    except KeyboardInterrupt:
-        pass
+    utils.pause()
 
 def ensure_ip_forward():
     with open("/proc/sys/net/ipv4/ip_forward") as f:
@@ -193,23 +181,6 @@ def rule_exists(cmd):
     result = subprocess.run(check_cmd, capture_output=True)
     return result.returncode == 0
 
-def ask(prompt):
-    try:
-        return input(f"{utils.WHITE}{prompt}{utils.GRAY} (Enter to skip): {utils.RESET}").strip()
-    except KeyboardInterrupt:
-        return None
-    
-def ask_required(prompt):
-    while True:
-        try:
-            value = input(f"{utils.WHITE}{prompt}: {utils.RESET}").strip()
-            if not value:
-                utils.log("This field is required.", "error")
-                continue
-            return value
-        except KeyboardInterrupt:
-            return None
-
 
 def show_chain(chain, table="filter",clear=True, pause=True):
     cmd = ["sudo", "iptables", "--line-numbers", "-n", "-v", "-L", chain, "-t", table]
@@ -220,23 +191,12 @@ def show_chain(chain, table="filter",clear=True, pause=True):
         os.system('clear')
         utils.print_menu_name(f" {chain} ")
 
-    word_colors = {
-        "ACCEPT": utils.GREEN,
-        "DROP": utils.RED,
-        "REJECT": utils.RED,
-        "all": utils.GRAY,
-        "tcp": utils.WHITE,
-        "udp": utils.WHITE,
-        "icmp": utils.WHITE,
-        "lo": utils.YELLOW
-    }
-
     if lines:
         words = lines[0].split()
         colored = " ".join(
             f"{utils.GREEN}{w}{utils.RESET}" if w =="ACCEPT" else 
             f"{utils.RED}{w}{utils.RESET}" if w == "DROP" else
-            f"{word_colors.get(w, utils.PINK)}{w}{utils.RESET}"
+            f"{utils.word_colors.get(w, utils.PINK)}{w}{utils.RESET}"
             for w in words
         )
         print(colored)
@@ -253,7 +213,7 @@ def show_chain(chain, table="filter",clear=True, pause=True):
         for row in rows:
             parts = []
             for i, cell in enumerate(row):
-                color = word_colors.get(cell,"")
+                color = utils.word_colors.get(cell,"")
                 reset = utils.RESET if color else ""
                 pad = col_widths[i] - len(cell) if i < len(col_widths) - 1 else 0
                 parts.append(f"{color}{cell}{reset}{' ' * pad}")
@@ -262,10 +222,7 @@ def show_chain(chain, table="filter",clear=True, pause=True):
     print()
 
     if pause:
-        try:
-            input("\nPress Enter to continue...")
-        except KeyboardInterrupt:
-            pass
+        utils.pause()
 
 def remove_rule(chain, table="filter"):
     while True:

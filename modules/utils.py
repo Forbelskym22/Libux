@@ -2,7 +2,6 @@ import shutil
 import subprocess
 from simple_term_menu import TerminalMenu
 import ipaddress
-from modules.fw_shared import ask
  
 # simple_term_menu cursor style (globally used)
 MENU_CURSOR_STYLE = ("fg_purple", "bold")
@@ -19,6 +18,41 @@ ORANGE = "\033[38;5;208m"
 GRAY = "\033[38;5;240m"
 RESET = "\033[0m"
 PREFIX = f"{PURPLE}[Libux]{RESET}"
+
+word_colors = {
+        "ACCEPT": GREEN,
+        "DROP": RED,
+        "REJECT": RED,
+        "all": GRAY,
+        "tcp": WHITE,
+        "udp": WHITE,
+        "icmp": WHITE,
+        "lo": YELLOW
+    }
+
+def ask(prompt):
+    try:
+        return input(f"{WHITE}{prompt}{GRAY} (Enter to skip): {RESET}").strip()
+    except KeyboardInterrupt:
+        return None
+    
+def ask_required(prompt):
+    while True:
+        try:
+            value = input(f"{WHITE}{prompt}: {RESET}").strip()
+            if not value:
+                log("This field is required.", "error")
+                continue
+            return value
+        except KeyboardInterrupt:
+            return None
+
+
+def pause():
+    try:
+        input(f"\n{GRAY}Press Enter to continue...{RESET}")
+    except KeyboardInterrupt:
+        pass
 
 def ask_ip():
     while True:
@@ -67,7 +101,7 @@ def pick_interface(text =""):
         return None
     return interfaces[choice]
 
-def is_service_installed(service_name):
+def is_binary_installed(service_name):
     """
     Function used to check if the service is installed on our device.
     """

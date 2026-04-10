@@ -2,12 +2,12 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import remove_rule, show_chain, rule_exists, ask, flush_chain, toggle_policy
+from modules.fw_shared import remove_rule, show_chain, rule_exists,  flush_chain, toggle_policy
 
 
 def input_allow_port(port, proto="tcp"):
     while True:
-        src_ip = ask("Choose source ip / subnet")
+        src_ip = utils.ask("Choose source ip / subnet")
         if src_ip is None: return
         if not src_ip or utils.check_ip(src_ip): break
         utils.log("Invalid IP/subnet.", "error")
@@ -68,7 +68,7 @@ def input_add_rule():
             input_allow_port(443)
         elif choice == 3:
             while True:
-                src_ip = ask("Choose source ip / subnet")
+                src_ip = utils.ask("Choose source ip / subnet")
                 if src_ip is None: return
                 if not src_ip or utils.check_ip(src_ip): break
                 utils.log("Invalid IP/subnet.", "error")
@@ -90,10 +90,7 @@ def input_add_rule():
         
 
         if choice in (0, 1, 2, 3, 4):
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
 
 
 def manage_input_chain():
@@ -120,18 +117,12 @@ def manage_input_chain():
             input_add_rule()
         elif choice == 1:
             remove_rule("INPUT")
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
         elif choice == 3:
             flush_chain("INPUT")
         elif choice == 4:
             toggle_policy("INPUT")
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
         elif choice == 6:
             show_chain("INPUT")
         elif choice == 7 or choice is None:

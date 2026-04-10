@@ -2,7 +2,7 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import discard_changes, save_rules, edit_rules, ask, ask_required, show_chain
+from modules.fw_shared import discard_changes, save_rules, edit_rules, show_chain
 from modules.fw_input import manage_input_chain
 from modules.fw_output import manage_output_chain
 from modules.fw_forward import manage_forward_chain
@@ -23,10 +23,7 @@ def show_firewall():
     for chain in ["PREROUTING", "POSTROUTING", "INPUT", "OUTPUT"]:
         show_chain(chain, table="nat", clear=False, pause=False)
 
-    try:
-        input("\nPress Enter to return to menu...")
-    except KeyboardInterrupt:
-        pass
+    utils.pause()
 
 
 
@@ -38,7 +35,7 @@ def setup_secure_baseline():
     def get_ssh_port():
         while True:
             try:
-                port = ask_required("Insert your SSH port")
+                port = utils.ask_required("Insert your SSH port")
             except KeyboardInterrupt:
                 return None
             if utils.check_port(port):
@@ -48,7 +45,7 @@ def setup_secure_baseline():
     def get_ssh_ip():
         while True:
             try:
-                ip = ask("Insert your SSH source IP")
+                ip = utils.ask("Insert your SSH source IP")
             except KeyboardInterrupt:
                 return None
             if not ip: return None  # Enter to skip
@@ -88,7 +85,7 @@ def setup_secure_baseline():
         try:
             allow_icmp = utils.choose(["yes","no"], "Allow ICMP?")
             if allow_icmp == "yes":
-                icmp_ip = ask("Select an source IP address to allow ICMP from")
+                icmp_ip = utils.ask("Select an source IP address to allow ICMP from")
                 if icmp_ip:
                     core_commands.append(["sudo", "iptables", "-A", "INPUT", "-s", icmp_ip, "-p", "icmp", "-j", "ACCEPT"])
                 else:
@@ -104,16 +101,12 @@ def setup_secure_baseline():
         subprocess.run(["sudo", "iptables", "-P", "FORWARD", "DROP"])
 
         utils.log("Baseline applied! Policy set to DROP.", "success")
-        try:
-            input("\nPress Enter to return to menu...")
-        except KeyboardInterrupt:
-            pass
+        
+        utils.pause()
+
     else:
         utils.log("Wizard cancelled.", "info")
-        try:
-            input("\nPress Enter to return...")
-        except KeyboardInterrupt:
-            pass
+        utils.pause()
 
 
 def show_firewall_menu():
@@ -169,7 +162,7 @@ def show_firewall_menu():
 
 
 def show_firewall_installation_menu():
-    if not utils.is_service_installed("iptables"):
+    if not utils.is_binary_installed("iptables"):
         options = ["Install iptables", "Back to main menu"]
 
         utils.print_menu_name("Firewall isn't installed.")
@@ -181,18 +174,18 @@ def show_firewall_installation_menu():
             subprocess.run(["sudo", "apt", "update"])
             subprocess.run(["sudo", "apt", "install", "iptables", "-y"])
 
-            if utils.is_service_installed("iptables"):
+            if utils.is_binary_installed("iptables"):
                 utils.log("iptables installed.", "success")
             else:
                 utils.log("Installation failed! Check logs or network connection.", "error")
-            utils.log("Press Enter to continue...", "info")
+            utils.pause()
         elif choice == 1 or choice is None:
             return
 
 
 def run():
-    if not utils.is_service_installed("iptables"):
+    if not utils.is_binary_installed("iptables"):
         show_firewall_installation_menu()
 
-    if utils.is_service_installed("iptables"):
+    if utils.is_binary_installed("iptables"):
         show_firewall_menu()

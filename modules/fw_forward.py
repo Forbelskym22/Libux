@@ -2,7 +2,7 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import ask, remove_rule, show_chain, rule_exists, flush_chain, toggle_policy
+from modules.fw_shared import remove_rule, show_chain, rule_exists, flush_chain, toggle_policy
 
 
 def forward_allow_traffic():
@@ -14,7 +14,7 @@ def forward_allow_traffic():
     iface_out = utils.pick_interface("out")
     if iface_out is None: return
     
-    src = ask("Source IP/subnet (e.g. 192.168.1.0/24)")
+    src = utils.ask("Source IP/subnet (e.g. 192.168.1.0/24)")
 
     if src is None: return
 
@@ -22,7 +22,7 @@ def forward_allow_traffic():
         utils.log("Invalid IP.", "error")
         return
     
-    dst = ask("Destination IP/subnet (e.g. 10.0.0.5)")
+    dst = utils.ask("Destination IP/subnet (e.g. 10.0.0.5)")
 
     if dst is None: return
 
@@ -37,7 +37,7 @@ def forward_allow_traffic():
 
     port = ""
     if proto in ("tcp", "udp"):
-        port = ask("Destination port")
+        port = utils.ask("Destination port")
         if port is None: return
 
     cmd = ["sudo", "iptables", "-A", "FORWARD"]
@@ -123,10 +123,7 @@ def forward_add_rule():
         
 
         if choice in (0, 1, 2):
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
 
 
 def manage_forward_chain():
@@ -153,18 +150,12 @@ def manage_forward_chain():
             forward_add_rule()
         elif choice == 1:
             remove_rule("FORWARD")
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
         elif choice == 3:
             flush_chain("FORWARD")
         elif choice == 4:
             toggle_policy("FORWARD")
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
         elif choice == 6:
             show_chain("FORWARD")
         elif choice == 7 or choice is None:
