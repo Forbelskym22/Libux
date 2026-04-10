@@ -145,14 +145,15 @@ def ask(prompt):
         return None
     
 def ask_required(prompt):
-    try:
-        value = input(f"{utils.WHITE}{prompt}: {utils.RESET}").strip()
-        if not value:
-            utils.log("This field is required.", "error")
-            return ask_required(prompt)
-        return value
-    except KeyboardInterrupt:
-        return None
+    while True:
+        try:
+            value = input(f"{utils.WHITE}{prompt}: {utils.RESET}").strip()
+            if not value:
+                utils.log("This field is required.", "error")
+                continue
+            return value
+        except KeyboardInterrupt:
+            return None
 
 
 def show_chain(chain, table="filter",clear=True, pause=True):
