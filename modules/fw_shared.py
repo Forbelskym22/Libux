@@ -23,7 +23,7 @@ def toggle_log_rule(chain):
     
     while True:
         try:
-            prefix = ask("Log prefix max 29 chars")
+            prefix = utils.ask("Log prefix max 29 chars")
         except KeyboardInterrupt:
             return
         if not prefix or valid_log_prefix(prefix):
@@ -32,7 +32,7 @@ def toggle_log_rule(chain):
 
     while True:
         try:
-            limit = ask("Rate limit e.g. 5/min")
+            limit = utils.ask("Rate limit e.g. 5/min")
         except KeyboardInterrupt:
             return
         if not limit or valid_log_limit(limit):
@@ -122,7 +122,7 @@ def save_rules():
 
 
 def discard_changes():
-    confirm = utils.choose(["yes","no"], f"Discrad changes and restore  from {RULES_FILE}?", "error")
+    confirm = utils.choose(["yes","no"], f"Discard changes and restore  from {RULES_FILE}?", "error")
     if confirm != "yes":
         return
     if not os.path.exists(RULES_FILE):

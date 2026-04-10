@@ -32,6 +32,7 @@ def manage_postrouting():
             "Remove rule",
             "",
             "Show",
+            "",
             "Back",
             "Flush"
         ]
@@ -45,9 +46,9 @@ def manage_postrouting():
             remove_rule("POSTROUTING", "nat")
         elif choice == 3:
             show_chain("POSTROUTING", "nat")
-        elif choice == 4 or choice is None:
+        elif choice == 5 or choice is None:
             break
-        elif choice == 5:
+        elif choice == 6:
             flush_chain("POSTROUTING", "nat")
 
         last = choice
