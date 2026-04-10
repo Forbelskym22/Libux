@@ -2,8 +2,7 @@ import shutil
 import subprocess
 from simple_term_menu import TerminalMenu
 import ipaddress
-from modules.fw_shared import ask
- 
+
 # simple_term_menu cursor style (globally used)
 MENU_CURSOR_STYLE = ("fg_purple", "bold")
 
@@ -20,12 +19,55 @@ GRAY = "\033[38;5;240m"
 RESET = "\033[0m"
 PREFIX = f"{PURPLE}[Libux]{RESET}"
 
+word_colors = {
+        "ACCEPT": GREEN,
+        "DROP": RED,
+        "REJECT": RED,
+        "all": GRAY,
+        "tcp": WHITE,
+        "udp": WHITE,
+        "icmp": WHITE,
+        "lo": YELLOW
+    }
+
+def run_cmd(cmd):
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        log(f"Command failed: {result.stderr.strip()}", "error")
+        return False
+    return True
+
+def ask(prompt):
+    try:
+        return input(f"{WHITE}{prompt}{GRAY} (Enter to skip): {RESET}").strip()
+    except KeyboardInterrupt:
+        return None
+
+def ask_required(prompt):
+    while True:
+        try:
+            value = input(f"{WHITE}{prompt}: {RESET}").strip()
+            if not value:
+                log("This field is required.", "error")
+                continue
+            return value
+        except KeyboardInterrupt:
+            return None
+
+
+def pause():
+    try:
+        input(f"\n{GRAY}Press Enter to continue...{RESET}")
+    except KeyboardInterrupt:
+        pass
+
 def ask_ip(msg="IP/subnet"):
     while True:
         src_ip = ask(msg)
         if src_ip is None: return
         if not src_ip or check_ip(src_ip): return src_ip
         log("Invalid IP/subnet.", "error")
+
 
 def check_ip(ip):
     try:
@@ -54,7 +96,7 @@ def pick_interface(text =""):
     cmd = ["ip", "-o", "link", "show"]
     result = subprocess.run(cmd, capture_output=True, text=True)
     interfaces = [line.split()[1].strip(":") for line in result.stdout.splitlines()]
-    
+
 
     message = "choose interface"
     if text != "":
@@ -67,7 +109,7 @@ def pick_interface(text =""):
         return None
     return interfaces[choice]
 
-def is_service_installed(service_name):
+def is_binary_installed(service_name):
     """
     Function used to check if the service is installed on our device.
     """

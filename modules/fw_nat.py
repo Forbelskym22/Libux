@@ -2,7 +2,7 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import ask, ask_required, remove_rule, show_chain, rule_exists, flush_chain, ensure_ip_forward
+from modules.fw_shared import remove_rule, show_chain, rule_exists, flush_chain, ensure_ip_forward
 
 
 def masquerade():
@@ -17,7 +17,7 @@ def masquerade():
     if rule_exists(cmd):
         utils.log("Rule already exists.", "info")
     else:
-        subprocess.run(cmd)
+        utils.run_cmd(cmd)
         utils.log(f"Masquerade applied on interface {iface_out}.", "success")
 
 
@@ -32,6 +32,7 @@ def manage_postrouting():
             "Remove rule",
             "",
             "Show",
+            "",
             "Back",
             "Flush"
         ]
@@ -45,9 +46,9 @@ def manage_postrouting():
             remove_rule("POSTROUTING", "nat")
         elif choice == 3:
             show_chain("POSTROUTING", "nat")
-        elif choice == 4 or choice is None:
+        elif choice == 5 or choice is None:
             break
-        elif choice == 5:
+        elif choice == 6:
             flush_chain("POSTROUTING", "nat")
 
         last = choice
@@ -59,26 +60,26 @@ def prerouting():
     if iface_in is None: return
 
     while True:
-        src_ip = ask("Source IP/subnet (optional)")
+        src_ip = utils.ask("Source IP/subnet (optional)")
         if src_ip is None: return
         if not src_ip or utils.check_ip(src_ip): break
         utils.log("Invalid IP.", "error")
 
 
     while True:
-        port = ask_required("Select port from which to forward")
+        port = utils.ask_required("Select port from which to forward")
         if port is None: return
         if utils.check_port(port): break
         utils.log("Invalid port.", "error")     
 
     while True:
-        des_ip = ask_required("Select destination IP address")
+        des_ip = utils.ask_required("Select destination IP address")
         if des_ip is None: return
         if utils.check_ip(des_ip): break
         utils.log("Invalid IP.", "error")  
 
     while True:
-        des_port = ask_required("Select port to which to forward")
+        des_port = utils.ask_required("Select port to which to forward")
         if des_port is None: return
         if utils.check_port(des_port): break
         utils.log("Invalid port.", "error") 
@@ -94,13 +95,10 @@ def prerouting():
         utils.log("Rule already exists.", "info")
     else:
 
-        result = subprocess.run(dnat_cmd)
+        result = subprocess.run(dnat_cmd, capture_output=True, text=True)
         if result.returncode != 0:
             utils.log("Failed to add DNAT rule", "error")
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
             return
         utils.log(f"{iface_in}:{port} -> {des_ip}:{des_port} (DNAT)", "success")
 
@@ -114,12 +112,9 @@ def prerouting():
             if src_ip: forward_cmd += ["-s", src_ip]
             forward_cmd += ["-j", "ACCEPT"]
 
-            subprocess.run(forward_cmd)
+            utils.run_cmd(forward_cmd)
             utils.log(f"FORWARD rule added automatically for {des_ip}:{des_port}.", "info")
-        try:
-            input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-        except KeyboardInterrupt:
-            pass
+        utils.pause()
 
 
     
