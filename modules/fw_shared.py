@@ -165,6 +165,9 @@ def toggle_policy(chain):
     result = subprocess.run(["sudo", "iptables", "-L", chain, "--line-numbers", "-n"],capture_output=True, text=True)
     current = "DROP" if "policy DROP" in result.stdout else "ACCEPT"
     new_policy = "DROP" if current == "ACCEPT" else "ACCEPT"
+    confirm = utils.choose(["yes","no"], f"WARNING: change {chain} policy {current} -> {new_policy}?", "error")
+    if confirm !="yes":
+        return
     subprocess.run(["sudo", "iptables", "-P", chain, new_policy])
     utils.log(f"{chain} policy: {current} -> {new_policy}", "success")
 
