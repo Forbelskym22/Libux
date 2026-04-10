@@ -21,5 +21,5 @@ def manage_settings():
             utils.VERBOSE = not utils.VERBOSE
             utils.log(f"Verbose mode {'enabled' if utils.VERBOSE else 'disabled'}.", "success")
             utils.pause()
-        elif choice == 3 or choice is None:
-            break
+        elif choice == 2 or choice is None:
+            return
