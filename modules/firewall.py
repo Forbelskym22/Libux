@@ -2,7 +2,7 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import discard_changes, save_rules, edit_rules, show_chain
+from modules.fw_shared import discard_changes, save_rules, edit_rules, show_chain, get_policy
 from modules.fw_input import manage_input_chain
 from modules.fw_output import manage_output_chain
 from modules.fw_forward import manage_forward_chain
@@ -111,16 +111,24 @@ def setup_secure_baseline():
 
 
 def show_firewall_menu():
-    last = 0
+    
     while True:
         os.system('clear')
         utils.print_menu_name("Firewall Configuration (iptables)")
 
+        last = 0
+        input_policy = get_policy("INPUT")
+        output_policy = get_policy("OUTPUT")
+        forward_policy = get_policy("FORWARD")
+        input_color = utils.RED if input_policy == "DROP" else utils.GREEN
+        output_color = utils.RED if output_policy == "DROP" else utils.GREEN
+        forward_color = utils.RED if forward_policy == "DROP" else utils.GREEN
+
         options = [
             "Default config (Wizard)",              # 0
-            "INPUT Chain",                          # 1
-            "OUTPUT Chain",                         # 2
-            "FORWARD Chain",                        # 3
+            f"INPUT Chain [{input_policy}]",        # 1
+            f"OUTPUT Chain [{output_policy}]",      # 2
+            f"FORWARD Chain [{forward_policy}]",    # 3
             "PREROUTING (DNAT / Port forwarding)",  # 4
             "POSTROUTING (MASQUERADE)",             # 5
             "",                                     # 6

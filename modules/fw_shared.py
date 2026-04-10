@@ -7,6 +7,10 @@ import re
 RULES_FILE = "/etc/iptables/rules.v4"
 RULES_BACKUP = "/etc/iptables/rules.v4.bak"
 
+def get_policy(chain, table="filter"):
+    result = subprocess.run(["sudo", "iptables", "-L", chain, "-n", "--line-numbers"], capture_output=True, text=True)
+    return "DROP" if "policy DROP" in result.stdout else "ACCEPT"
+
 def allow_port(chain, port, proto="tcp", src_ip=None, dst_ip=None):
     cmd = ["sudo", "iptables", "-A", chain]
     if src_ip:
