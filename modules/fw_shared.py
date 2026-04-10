@@ -1,4 +1,5 @@
 from simple_term_menu import TerminalMenu
+import datetime
 import subprocess
 import os
 from modules import utils
@@ -6,6 +7,15 @@ import re
 
 RULES_FILE = "/etc/iptables/rules.v4"
 RULES_BACKUP = "/etc/iptables/rules.v4.bak"
+
+def backup_rules():
+    os.makedirs("/etc/iptables/backups", exist_ok=True)
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    path = f"/etc/iptables/backups/rules_{timestamp}.v4"
+    result = subprocess.run(["sudo", "iptables-save"], capture_output=True, text=True)
+    with open(path, "w") as f:
+        f.write(result.stdout)
+    utils.log(f"Backup saved to {path}.", "info")
 
 def get_policy(chain, table="filter"):
     result = subprocess.run(["sudo", "iptables", "-L", chain, "-n", "--line-numbers"], capture_output=True, text=True)
@@ -187,6 +197,7 @@ def toggle_policy(chain):
     confirm = utils.choose(["yes","no"], f"WARNING: change {chain} policy {current} -> {new_policy}?", "error")
     if confirm !="yes":
         return
+    backup_rules()
     utils.run_cmd(["sudo", "iptables", "-P", chain, new_policy])
     utils.log(f"{chain} policy: {current} -> {new_policy}", "success")
 
@@ -199,6 +210,7 @@ def flush_chain(chain, table="filter"):
     confirm = utils.choose(["yes", "no"], f"WARNING: this will flush all rules in {chain}!", "error")
     if confirm != "yes": 
         return
+    backup_rules()
     cmd = ["sudo","iptables","-F", chain]
     if table != "filter":
         cmd += ["-t", table]
