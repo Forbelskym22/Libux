@@ -94,25 +94,33 @@ def prerouting():
     if rule_exists(dnat_cmd):
         utils.log("Rule already exists.", "info")
     else:
-        subprocess.run(dnat_cmd)
+
+        result = subprocess.run(dnat_cmd)
+        if result.returncode != 0:
+            utils.log("Failed to add DNAT rule", "error")
+            try:
+                input(f"\n{utils.GRAY}Press Enter to continue...")
+            except KeyboardInterrupt:
+                pass
+            return
         utils.log(f"{iface_in}:{port} -> {des_ip}:{des_port} (DNAT)", "success")
 
-    check_cmd = ["sudo", "iptables", "-C", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", protocol, "--dport", des_port]
-    if src_ip: check_cmd += ["-s", src_ip]
-    check_cmd += ["-j", "ACCEPT"]
-    check = subprocess.run(check_cmd, capture_output=True)
+        check_cmd = ["sudo", "iptables", "-C", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", protocol, "--dport", des_port]
+        if src_ip: check_cmd += ["-s", src_ip]
+        check_cmd += ["-j", "ACCEPT"]
+        check = subprocess.run(check_cmd, capture_output=True)
 
-    if check.returncode != 0:
-        forward_cmd = ["sudo", "iptables", "-A", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", protocol, "--dport", des_port]
-        if src_ip: forward_cmd += ["-s", src_ip]
-        forward_cmd += ["-j", "ACCEPT"]
+        if check.returncode != 0:
+            forward_cmd = ["sudo", "iptables", "-A", "FORWARD", "-i", iface_in, "-d", des_ip, "-p", protocol, "--dport", des_port]
+            if src_ip: forward_cmd += ["-s", src_ip]
+            forward_cmd += ["-j", "ACCEPT"]
 
-        subprocess.run(forward_cmd)
-        utils.log(f"FORWARD rule added automatically for {des_ip}:{des_port}.", "info")
-    try:
-        input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-    except KeyboardInterrupt:
-        pass
+            subprocess.run(forward_cmd)
+            utils.log(f"FORWARD rule added automatically for {des_ip}:{des_port}.", "info")
+        try:
+            input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
+        except KeyboardInterrupt:
+            pass
 
 
     
