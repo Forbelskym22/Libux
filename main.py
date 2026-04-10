@@ -3,12 +3,13 @@ import os
 from simple_term_menu import TerminalMenu
 from modules import firewall
 from modules import utils
+from modules import settings
 
 def main():
     if os.geteuid() != 0:
         utils.log("This script requires root permissions. Run with sudo.", "error")
         sys.exit(1)
-    options = ["Firewall (iptables)", "Ukončit Libux"]
+    options = ["Firewall (iptables)", "Settings", "Ukončit Libux"]
     
     while True:
         os.system('clear')
@@ -18,7 +19,9 @@ def main():
         
         if menu_entry_index == 0:
             firewall.run()
-        elif menu_entry_index == 1 or menu_entry_index is None:
+        elif menu_entry_index == 1:
+            settings.manage_settings()
+        elif menu_entry_index == 2 or menu_entry_index is None:
             utils.log("Ukončuji Libux...", "info")
             sys.exit(0)
 
