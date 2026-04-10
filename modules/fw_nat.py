@@ -97,10 +97,7 @@ def prerouting():
         result = subprocess.run(dnat_cmd)
         if result.returncode != 0:
             utils.log("Failed to add DNAT rule", "error")
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
             return
         utils.log(f"{iface_in}:{port} -> {des_ip}:{des_port} (DNAT)", "success")
 
@@ -116,10 +113,7 @@ def prerouting():
 
             subprocess.run(forward_cmd)
             utils.log(f"FORWARD rule added automatically for {des_ip}:{des_port}.", "info")
-        try:
-            input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-        except KeyboardInterrupt:
-            pass
+        utils.pause()
 
 
     

@@ -123,10 +123,7 @@ def forward_add_rule():
         
 
         if choice in (0, 1, 2):
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
 
 
 def manage_forward_chain():
@@ -153,18 +150,12 @@ def manage_forward_chain():
             forward_add_rule()
         elif choice == 1:
             remove_rule("FORWARD")
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
         elif choice == 3:
             flush_chain("FORWARD")
         elif choice == 4:
             toggle_policy("FORWARD")
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
         elif choice == 6:
             show_chain("FORWARD")
         elif choice == 7 or choice is None:

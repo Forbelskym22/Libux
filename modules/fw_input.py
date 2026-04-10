@@ -90,10 +90,7 @@ def input_add_rule():
         
 
         if choice in (0, 1, 2, 3, 4):
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
 
 
 def manage_input_chain():
@@ -120,18 +117,12 @@ def manage_input_chain():
             input_add_rule()
         elif choice == 1:
             remove_rule("INPUT")
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
         elif choice == 3:
             flush_chain("INPUT")
         elif choice == 4:
             toggle_policy("INPUT")
-            try:
-                input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-            except KeyboardInterrupt:
-                pass
+            utils.pause()
         elif choice == 6:
             show_chain("INPUT")
         elif choice == 7 or choice is None:

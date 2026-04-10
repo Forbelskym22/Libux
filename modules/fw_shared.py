@@ -53,17 +53,14 @@ def toggle_log_rule(chain):
 
 
 def edit_rules():
-    if not utils.is_service_installed("nano"):
+    if not utils.is_binary_installed("nano"):
         utils.log("Nano is not installed.")
         confirm = utils.choose(["yes", "no"], "Install nano?")
         if confirm != "yes":
             return
         subprocess.run(["sudo", "apt", "install", "nano", "-y"])
 
-        try:
-            input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-        except KeyboardInterrupt:
-            pass
+        utils.pause()
         
 
     os.makedirs("/etc/iptables", exist_ok=True)
@@ -95,17 +92,14 @@ def edit_rules():
             subprocess.run(["sudo", "iptables-restore", RULES_BACKUP])
             utils.log("Backup restored.", "success")
         
-        try:
-            input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-        except KeyboardInterrupt:
-            pass
+        utils.pause()
 
 def save_rules():
     confirm = utils.choose(["yes", "no"], "Save current iptables rules?")
     if confirm != "yes":
         return
     
-    if not utils.is_service_installed("iptables-save"):
+    if not utils.is_binary_installed("iptables-save"):
         utils.log("iptables-save not found.", "error")
         return
 
@@ -115,19 +109,16 @@ def save_rules():
         f.write(result.stdout)
     utils.log(f"Rules saved to {RULES_FILE}.", "success")
 
-    if not utils.is_service_installed("iptables-restore"):
+    if not utils.is_binary_installed("iptables-restore"):
         install = utils.choose(["yes", "no"], "iptables-persistent not found. Install it?")
         if install == "yes":
             subprocess.run(["sudo", "apt-get", "install", "-y", "iptables-persistent"])
     
-    if utils.is_service_installed("iptables-restore"):
+    if utils.is_binary_installed("iptables-restore"):
         subprocess.run(["sudo", "netfilter-persistent", "save"])
         utils.log("Rules will persist across reboots.", "success")
     
-    try:
-        input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-    except KeyboardInterrupt:
-        pass
+    utils.pause()
 
 
 def discard_changes():
@@ -141,10 +132,7 @@ def discard_changes():
     subprocess.run(["sudo","iptables-restore", RULES_FILE])
     utils.log("Rules restored.", "success")
 
-    try:
-        input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
-    except KeyboardInterrupt:
-        pass
+    utils.pause()
 
 def ensure_ip_forward():
     with open("/proc/sys/net/ipv4/ip_forward") as f:
@@ -262,10 +250,7 @@ def show_chain(chain, table="filter",clear=True, pause=True):
     print()
 
     if pause:
-        try:
-            input("\nPress Enter to continue...")
-        except KeyboardInterrupt:
-            pass
+        utils.pause()
 
 def remove_rule(chain, table="filter"):
     while True:

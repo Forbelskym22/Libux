@@ -20,6 +20,12 @@ GRAY = "\033[38;5;240m"
 RESET = "\033[0m"
 PREFIX = f"{PURPLE}[Libux]{RESET}"
 
+def pause():
+    try:
+        input(f"\n{GRAY}Press Enter to continue...{RESET}")
+    except KeyboardInterrupt:
+        pass
+
 def ask_ip():
     while True:
         src_ip = ask("Choose source ip / subnet")

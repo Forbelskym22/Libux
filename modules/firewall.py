@@ -23,10 +23,7 @@ def show_firewall():
     for chain in ["PREROUTING", "POSTROUTING", "INPUT", "OUTPUT"]:
         show_chain(chain, table="nat", clear=False, pause=False)
 
-    try:
-        input("\nPress Enter to return to menu...")
-    except KeyboardInterrupt:
-        pass
+    utils.pause()
 
 
 
@@ -104,16 +101,12 @@ def setup_secure_baseline():
         subprocess.run(["sudo", "iptables", "-P", "FORWARD", "DROP"])
 
         utils.log("Baseline applied! Policy set to DROP.", "success")
-        try:
-            input("\nPress Enter to return to menu...")
-        except KeyboardInterrupt:
-            pass
+        
+        utils.pause()
+
     else:
         utils.log("Wizard cancelled.", "info")
-        try:
-            input("\nPress Enter to return...")
-        except KeyboardInterrupt:
-            pass
+        utils.pause()
 
 
 def show_firewall_menu():
@@ -185,7 +178,7 @@ def show_firewall_installation_menu():
                 utils.log("iptables installed.", "success")
             else:
                 utils.log("Installation failed! Check logs or network connection.", "error")
-            utils.log("Press Enter to continue...", "info")
+            utils.pause()
         elif choice == 1 or choice is None:
             return
 
