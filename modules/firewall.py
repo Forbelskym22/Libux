@@ -37,13 +37,13 @@ def show_firewall():
                 f"{utils.GREEN}{w}{utils.RESET}" if w == "ACCEPT" else
                 f"{utils.RED}{w}{utils.RESET}" if w in ("DROP", "REJECT") else
                 f"{utils.PINK}{w}{utils.RESET}"
-                for w in line.split(" ")
+                for w in line.split()
             )
             print(colored)
         else:
             colored = " ".join(
                 f"{word_colors[w]}{w}{utils.RESET}" if w in word_colors else w
-                for w in line.split(" ")
+                for w in line.split()
             )
             print(colored)
 
@@ -54,13 +54,13 @@ def show_firewall():
                 f"{utils.GREEN}{w}{utils.RESET}" if w == "ACCEPT" else
                 f"{utils.RED}{w}{utils.RESET}" if w in ("DROP", "REJECT") else
                 f"{utils.PINK}{w}{utils.RESET}"
-                for w in line.split(" ")
+                for w in line.split()
             )
             print(colored)
         else:
             colored = " ".join(
                 f"{word_colors[w]}{w}{utils.RESET}" if w in word_colors else w
-                for w in line.split(" ")
+                for w in line.split()
             )
             print(colored)
 
