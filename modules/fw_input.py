@@ -2,12 +2,12 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import remove_rule, show_chain, rule_exists, ask, flush_chain, toggle_policy
+from modules.fw_shared import remove_rule, show_chain, rule_exists,  flush_chain, toggle_policy
 
 
 def input_allow_port(port, proto="tcp"):
     while True:
-        src_ip = ask("Choose source ip / subnet")
+        src_ip = utils.ask("Choose source ip / subnet")
         if src_ip is None: return
         if not src_ip or utils.check_ip(src_ip): break
         utils.log("Invalid IP/subnet.", "error")
@@ -68,7 +68,7 @@ def input_add_rule():
             input_allow_port(443)
         elif choice == 3:
             while True:
-                src_ip = ask("Choose source ip / subnet")
+                src_ip = utils.ask("Choose source ip / subnet")
                 if src_ip is None: return
                 if not src_ip or utils.check_ip(src_ip): break
                 utils.log("Invalid IP/subnet.", "error")

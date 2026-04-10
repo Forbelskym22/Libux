@@ -181,23 +181,6 @@ def rule_exists(cmd):
     result = subprocess.run(check_cmd, capture_output=True)
     return result.returncode == 0
 
-def ask(prompt):
-    try:
-        return input(f"{utils.WHITE}{prompt}{utils.GRAY} (Enter to skip): {utils.RESET}").strip()
-    except KeyboardInterrupt:
-        return None
-    
-def ask_required(prompt):
-    while True:
-        try:
-            value = input(f"{utils.WHITE}{prompt}: {utils.RESET}").strip()
-            if not value:
-                utils.log("This field is required.", "error")
-                continue
-            return value
-        except KeyboardInterrupt:
-            return None
-
 
 def show_chain(chain, table="filter",clear=True, pause=True):
     cmd = ["sudo", "iptables", "--line-numbers", "-n", "-v", "-L", chain, "-t", table]
@@ -208,23 +191,12 @@ def show_chain(chain, table="filter",clear=True, pause=True):
         os.system('clear')
         utils.print_menu_name(f" {chain} ")
 
-    word_colors = {
-        "ACCEPT": utils.GREEN,
-        "DROP": utils.RED,
-        "REJECT": utils.RED,
-        "all": utils.GRAY,
-        "tcp": utils.WHITE,
-        "udp": utils.WHITE,
-        "icmp": utils.WHITE,
-        "lo": utils.YELLOW
-    }
-
     if lines:
         words = lines[0].split()
         colored = " ".join(
             f"{utils.GREEN}{w}{utils.RESET}" if w =="ACCEPT" else 
             f"{utils.RED}{w}{utils.RESET}" if w == "DROP" else
-            f"{word_colors.get(w, utils.PINK)}{w}{utils.RESET}"
+            f"{utils.word_colors.get(w, utils.PINK)}{w}{utils.RESET}"
             for w in words
         )
         print(colored)
@@ -241,7 +213,7 @@ def show_chain(chain, table="filter",clear=True, pause=True):
         for row in rows:
             parts = []
             for i, cell in enumerate(row):
-                color = word_colors.get(cell,"")
+                color = utils.word_colors.get(cell,"")
                 reset = utils.RESET if color else ""
                 pad = col_widths[i] - len(cell) if i < len(col_widths) - 1 else 0
                 parts.append(f"{color}{cell}{reset}{' ' * pad}")

@@ -2,7 +2,7 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import ask, ask_required, remove_rule, show_chain, rule_exists, flush_chain, ensure_ip_forward
+from modules.fw_shared import remove_rule, show_chain, rule_exists, flush_chain, ensure_ip_forward
 
 
 def masquerade():
@@ -59,26 +59,26 @@ def prerouting():
     if iface_in is None: return
 
     while True:
-        src_ip = ask("Source IP/subnet (optional)")
+        src_ip = utils.ask("Source IP/subnet (optional)")
         if src_ip is None: return
         if not src_ip or utils.check_ip(src_ip): break
         utils.log("Invalid IP.", "error")
 
 
     while True:
-        port = ask_required("Select port from which to forward")
+        port = utils.ask_required("Select port from which to forward")
         if port is None: return
         if utils.check_port(port): break
         utils.log("Invalid port.", "error")     
 
     while True:
-        des_ip = ask_required("Select destination IP address")
+        des_ip = utils.ask_required("Select destination IP address")
         if des_ip is None: return
         if utils.check_ip(des_ip): break
         utils.log("Invalid IP.", "error")  
 
     while True:
-        des_port = ask_required("Select port to which to forward")
+        des_port = utils.ask_required("Select port to which to forward")
         if des_port is None: return
         if utils.check_port(des_port): break
         utils.log("Invalid port.", "error") 

@@ -2,7 +2,7 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import discard_changes, save_rules, edit_rules, ask, ask_required, show_chain
+from modules.fw_shared import discard_changes, save_rules, edit_rules, show_chain
 from modules.fw_input import manage_input_chain
 from modules.fw_output import manage_output_chain
 from modules.fw_forward import manage_forward_chain
@@ -35,7 +35,7 @@ def setup_secure_baseline():
     def get_ssh_port():
         while True:
             try:
-                port = ask_required("Insert your SSH port")
+                port = utils.ask_required("Insert your SSH port")
             except KeyboardInterrupt:
                 return None
             if utils.check_port(port):
@@ -45,7 +45,7 @@ def setup_secure_baseline():
     def get_ssh_ip():
         while True:
             try:
-                ip = ask("Insert your SSH source IP")
+                ip = utils.ask("Insert your SSH source IP")
             except KeyboardInterrupt:
                 return None
             if not ip: return None  # Enter to skip
@@ -85,7 +85,7 @@ def setup_secure_baseline():
         try:
             allow_icmp = utils.choose(["yes","no"], "Allow ICMP?")
             if allow_icmp == "yes":
-                icmp_ip = ask("Select an source IP address to allow ICMP from")
+                icmp_ip = utils.ask("Select an source IP address to allow ICMP from")
                 if icmp_ip:
                     core_commands.append(["sudo", "iptables", "-A", "INPUT", "-s", icmp_ip, "-p", "icmp", "-j", "ACCEPT"])
                 else:
