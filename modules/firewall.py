@@ -80,19 +80,19 @@ def setup_secure_baseline():
 
         if allow_ssh == "yes" and ssh_port:
             if ssh_ip:
-                core_commands.append(f"sudo iptables -A INPUT -s {ssh_ip} -p tcp --dport {ssh_port} -j ACCEPT")
+                core_commands.append(["sudo", "iptables", "-A", "INPUT", "-s", ssh_ip, "-p", "tcp", "--dport", ssh_port, "-j", "ACCEPT"])
             else:
-                core_commands.append(f"sudo iptables -A INPUT -p tcp --dport {ssh_port} -j ACCEPT")
-        
+                core_commands.append(["sudo", "iptables", "-A", "INPUT", "-p", "tcp", "--dport", ssh_port, "-j", "ACCEPT"])
+
 
         try:
             allow_icmp = utils.choose(["yes","no"], "Allow ICMP?")
             if allow_icmp == "yes":
                 icmp_ip = ask("Select an source IP address to allow ICMP from")
                 if icmp_ip:
-                    core_commands.append(f"sudo iptables -A INPUT -s {icmp_ip} -p icmp -j ACCEPT")
+                    core_commands.append(["sudo", "iptables", "-A", "INPUT", "-s", icmp_ip, "-p", "icmp", "-j", "ACCEPT"])
                 else:
-                    core_commands.append("sudo iptables -A INPUT -p icmp -j ACCEPT")
+                    core_commands.append(["sudo", "iptables", "-A", "INPUT", "-p", "icmp", "-j", "ACCEPT"])
                 utils.log("Ping allowed.", "success")
         except KeyboardInterrupt:
             pass
