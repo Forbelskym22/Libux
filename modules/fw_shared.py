@@ -2,9 +2,55 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
+import re
 
 RULES_FILE = "/etc/iptables/rules.v4"
 RULES_BACKUP = "/etc/iptables/rules.v4.bak"
+
+def valid_log_prefix(prefix):
+    return len(prefix) <= 29 and '"' not in prefix and "'" not in prefix
+
+def valid_log_limit(limit):
+    return bool(re.match(r'^\d+/(second|minute|hour|day|s|m|h|d)$', limit))
+
+def toggle_log_rule(chain):
+    check = subprocess.run(["sudo", "iptables", "-C", chain, "-j", "LOG"], capture_output=True)
+
+    if check.returncode == 0:
+        subprocess.run(["sudo", "iptables", "-D", chain, "-j", "LOG"])
+        utils.log(f"Logging disabled on {chain}.", "success")
+        return
+    
+    while True:
+        try:
+            prefix = ask("Log prefix max 29 chars")
+        except KeyboardInterrupt:
+            return
+        if not prefix or valid_log_prefix(prefix):
+            break
+        utils.log("Invalid prefix (max 29 chars, no quotes).", "error")
+
+    while True:
+        try:
+            limit = ask("Rate limit e.g. 5/min")
+        except KeyboardInterrupt:
+            return
+        if not limit or valid_log_limit(limit):
+            break
+        utils.log("Invalid format. Use e.g. 5/min, 10/hour.", "error")
+
+    
+    cmd = ["sudo", "iptables", "-A", chain]
+    if limit:
+        cmd += ["-m","limit","--limit",limit]
+    cmd += ["-j", "LOG"]
+    if prefix:
+        cmd += ["--log-prefix", prefix]
+        
+    subprocess.run(cmd)
+    utils.log(f"Logging enabled on {chain}.", "success")
+    
+
 
 def edit_rules():
     if not utils.is_service_installed("nano"):
@@ -111,9 +157,10 @@ def ensure_ip_forward():
 
     persist = utils.choose(["yes", "no"], "Make ip_forward persistent across reboots?")
     if persist == "yes":
-        with open("/etc/systctl.d/99-libux.conf", "w") as f:
+        os.makedirs("/etc/sysctl.d", exist_ok=True)
+        with open("/etc/sysctl.d/99-libux.conf", "w") as f:
             f.write("net.ipv4.ip_forward = 1\n")
-        utils.log("Saved to /etc/systctl.d/99-libux.conf", "success")
+        utils.log("Saved to /etc/sysctl.d/99-libux.conf", "success")
 
 def toggle_policy(chain):
     result = subprocess.run(["sudo", "iptables", "-L", chain, "--line-numbers", "-n"],capture_output=True, text=True)
@@ -124,6 +171,11 @@ def toggle_policy(chain):
         return
     subprocess.run(["sudo", "iptables", "-P", chain, new_policy])
     utils.log(f"{chain} policy: {current} -> {new_policy}", "success")
+
+    if new_policy == "DROP":
+        enable_log = utils.choose(["yes","no"], "Enable logging for dropped traffic?")
+        if enable_log == "yes":
+            toggle_log_rule(chain)
 
 def flush_chain(chain, table="filter"):
     confirm = utils.choose(["yes", "no"], f"WARNING: this will flush all rules in {chain}!", "error")
