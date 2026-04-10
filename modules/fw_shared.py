@@ -7,6 +7,32 @@ import re
 RULES_FILE = "/etc/iptables/rules.v4"
 RULES_BACKUP = "/etc/iptables/rules.v4.bak"
 
+def allow_port(chain, port, proto="tcp", src_ip=None, dst_ip=None):
+    cmd = ["sudo", "iptables", "-A", chain]
+    if src_ip:
+        cmd += ["-s", src_ip]
+    if dst_ip:
+        cmd += ["-d", dst_ip]
+    cmd += ["-p", proto, "--dport", str(port), "-j", "ACCEPT"]
+    if rule_exists(cmd):
+        utils.log("Rule already exists", "info")
+    else:
+        utils.run_cmd(cmd)
+        utils.log(f"Allowed {proto.upper()} port {port} on {chain}.", "success")
+
+def allow_icmp(chain, src_ip=None, dst_ip=None):
+    cmd = ["sudo", "iptables", "-A", chain]
+    if src_ip:
+        cmd += ["-s", src_ip]
+    if dst_ip:
+        cmd += ["-d", dst_ip]
+    cmd += ["-p", "icmp", "-j", "ACCEPT"]
+    if rule_exists(cmd):
+        utils.log("Rule already exists", "info")
+    else:
+        utils.run_cmd(cmd)
+        utils.log(f"ICMP allowed on {chain}.", "success")
+
 def valid_log_prefix(prefix):
     return len(prefix) <= 29 and '"' not in prefix and "'" not in prefix
 
@@ -47,7 +73,7 @@ def toggle_log_rule(chain):
     if prefix:
         cmd += ["--log-prefix", prefix]
         
-    subprocess.run(cmd)
+    utils.run_cmd(cmd)
     utils.log(f"Logging enabled on {chain}.", "success")
     
 
@@ -184,7 +210,7 @@ def flush_chain(chain, table="filter"):
     cmd = ["sudo","iptables","-F", chain]
     if table != "filter":
         cmd += ["-t", table]
-    subprocess.run(cmd)
+    utils.run_cmd(cmd)
     utils.log(f"{chain} flushed.", "success")
 
 
@@ -307,5 +333,5 @@ def remove_rule(chain, table="filter"):
         if confirm != "yes":
             continue
         cmd = ["sudo", "iptables", "-t", table, "-D", chain, line_num] if table != "filter" else ["sudo", "iptables", "-D", chain, line_num]
-        subprocess.run(cmd)
+        utils.run_cmd(cmd)
         utils.log(f"Rule {line_num} removed from {chain}.", "success")

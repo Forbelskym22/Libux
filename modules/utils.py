@@ -20,11 +20,11 @@ GRAY = "\033[38;5;240m"
 RESET = "\033[0m"
 PREFIX = f"{PURPLE}[Libux]{RESET}"
 
-def ask_ip():
+def ask_ip(msg="IP/subnet"):
     while True:
-        src_ip = ask("Choose source ip / subnet")
+        src_ip = ask(msg)
         if src_ip is None: return
-        if not src_ip or check_ip(src_ip): break
+        if not src_ip or check_ip(src_ip): return src_ip
         log("Invalid IP/subnet.", "error")
 
 def check_ip(ip):

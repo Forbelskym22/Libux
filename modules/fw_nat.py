@@ -11,7 +11,7 @@ def masquerade():
     iface_out = utils.pick_interface("out")
     if iface_out is None:
         return
-    src_ip = utils.ask_ip()
+    src_ip = utils.ask_ip("Source IP/subnet for masquerading")
     if src_ip: cmd = ["sudo", "iptables", "-t", "nat", "-A", "POSTROUTING", "-s", src_ip, "-o", iface_out, "-j", "MASQUERADE"]
     else: cmd = ["sudo", "iptables", "-t", "nat", "-A", "POSTROUTING", "-o", iface_out, "-j", "MASQUERADE"]
     if rule_exists(cmd):

@@ -2,7 +2,7 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import ask, remove_rule, show_chain, rule_exists, flush_chain, toggle_policy
+from modules.fw_shared import remove_rule, show_chain, rule_exists, flush_chain, toggle_policy, allow_icmp
 
 
 def forward_allow_traffic():
@@ -67,7 +67,7 @@ def forward_allow_es_rel():
     if permission != "yes":
         return
 
-    src_ip = utils.ask_ip()
+    src_ip = utils.ask_ip("Source IP/subnet to allow established/related from")
     if src_ip is None: return
 
     iface_in  = utils.pick_interface("in")
@@ -111,12 +111,7 @@ def forward_add_rule():
         elif choice == 1:
             forward_allow_es_rel()
         elif choice == 2:
-            cmd = ["sudo", "iptables", "-A", "FORWARD", "-p", "icmp", "-j", "ACCEPT"]
-            if rule_exists(cmd):
-                utils.log("Rule already exists.", "info")
-            else:
-                subprocess.run(cmd)
-                utils.log("ICMP (ping) allowed on FORWARD.", "success")
+            allow_icmp("FORWARD")
                     
         elif choice == 4 or choice is None:
             break
