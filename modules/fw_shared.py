@@ -157,9 +157,10 @@ def ensure_ip_forward():
 
     persist = utils.choose(["yes", "no"], "Make ip_forward persistent across reboots?")
     if persist == "yes":
-        with open("/etc/systctl.d/99-libux.conf", "w") as f:
+        os.makedirs("/etc/sysctl.d", exist_ok=True)
+        with open("/etc/sysctl.d/99-libux.conf", "w") as f:
             f.write("net.ipv4.ip_forward = 1\n")
-        utils.log("Saved to /etc/systctl.d/99-libux.conf", "success")
+        utils.log("Saved to /etc/sysctl.d/99-libux.conf", "success")
 
 def toggle_policy(chain):
     result = subprocess.run(["sudo", "iptables", "-L", chain, "--line-numbers", "-n"],capture_output=True, text=True)
