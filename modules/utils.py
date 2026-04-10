@@ -67,7 +67,7 @@ def pick_interface(text =""):
         return None
     return interfaces[choice]
 
-def is_service_installed(service_name):
+def is_binary_installed(service_name):
     """
     Function used to check if the service is installed on our device.
     """

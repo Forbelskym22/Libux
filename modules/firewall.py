@@ -169,7 +169,7 @@ def show_firewall_menu():
 
 
 def show_firewall_installation_menu():
-    if not utils.is_service_installed("iptables"):
+    if not utils.is_binary_installed("iptables"):
         options = ["Install iptables", "Back to main menu"]
 
         utils.print_menu_name("Firewall isn't installed.")
@@ -181,7 +181,7 @@ def show_firewall_installation_menu():
             subprocess.run(["sudo", "apt", "update"])
             subprocess.run(["sudo", "apt", "install", "iptables", "-y"])
 
-            if utils.is_service_installed("iptables"):
+            if utils.is_binary_installed("iptables"):
                 utils.log("iptables installed.", "success")
             else:
                 utils.log("Installation failed! Check logs or network connection.", "error")
@@ -191,8 +191,8 @@ def show_firewall_installation_menu():
 
 
 def run():
-    if not utils.is_service_installed("iptables"):
+    if not utils.is_binary_installed("iptables"):
         show_firewall_installation_menu()
 
-    if utils.is_service_installed("iptables"):
+    if utils.is_binary_installed("iptables"):
         show_firewall_menu()
