@@ -32,6 +32,17 @@ word_colors = {
 
 VERBOSE = False
 
+def create_menu(options, cursor_index=0):
+    return TerminalMenu(
+        options,
+        cursor_index=cursor_index,
+        cycle_cursor=True,
+        clear_screen=True,
+        skip_empty_entries=True,
+        menu_cursor_style=MENU_CURSOR_STYLE
+    )
+
+
 def run_cmd(cmd):
     if VERBOSE:
         log(f"Running: {' '.join(cmd)}", "info")
