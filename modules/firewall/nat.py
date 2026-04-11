@@ -2,7 +2,7 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import remove_rule, show_chain, rule_exists, flush_chain, ensure_ip_forward
+from .shared import remove_rule, show_chain, rule_exists, flush_chain, ensure_ip_forward
 
 
 def masquerade():

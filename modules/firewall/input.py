@@ -2,19 +2,18 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-
-from modules.fw_shared import remove_rule, show_chain, rule_exists, flush_chain, toggle_policy, allow_port, allow_icmp
-
-
-
-def output_allow_port(port, proto="tcp"):
-    dst_ip = utils.ask_ip("Destination IP/subnet to allow")
-    if dst_ip is None: return
-    allow_port("OUTPUT", port, proto, dst_ip=dst_ip or None)
+from .shared import remove_rule, show_chain, rule_exists, flush_chain, toggle_policy, allow_port, allow_icmp
 
 
 
-def output_allow_custom():
+def input_allow_port(port, proto="tcp"):
+    src_ip = utils.ask_ip("Source IP/subnet to allow")
+    if src_ip is None: return
+    allow_port("INPUT", port, proto, src_ip=src_ip or None)
+
+
+
+def input_allow_custom():
     proto = utils.choose(["tcp", "udp"], "Choose protocol.")
     if proto is None:
         return
@@ -25,16 +24,16 @@ def output_allow_custom():
         except KeyboardInterrupt:
             return
         if utils.check_port(port):
-            output_allow_port(port, proto)
+            input_allow_port(port, proto)
             return
         utils.log("Invalid port.", "error")
 
 
 
-def output_add_rule():
+def input_add_rule():
     while True:
         os.system('clear')
-        utils.print_menu_name("Firewall > OUTPUT Chain > Add rule")
+        utils.print_menu_name("Firewall > INPUT Chain > Add rule")
 
         options = [
             "HTTP (80/tcp)",
@@ -50,20 +49,19 @@ def output_add_rule():
         choice = utils.show_menu(menu)
 
         if choice == 0:
-            output_allow_port(80)
+            input_allow_port(80)
         elif choice == 1:
-            output_allow_port(443)
+            input_allow_port(443)
         elif choice == 2:
-            output_allow_port(80)
-            output_allow_port(443)
+            input_allow_port(80)
+            input_allow_port(443)
         elif choice == 3:
-            des_ip = utils.ask_ip("Destination IP/subnet to allow ICMP to")
-            if des_ip is None: return
-            allow_icmp("OUTPUT", dst_ip=des_ip or None)
-                
+            src_ip = utils.ask_ip("Source IP/subnet to allow ICMP from")
+            if src_ip is None: return
+            allow_icmp("INPUT", src_ip=src_ip or None)
 
         elif choice == 4:
-            output_allow_custom()
+            input_allow_custom()
         elif choice == 6 or choice is None:
             break
         
@@ -75,11 +73,11 @@ def output_add_rule():
                 pass
 
 
-def manage_output_chain():
+def manage_input_chain():
     last = 0
     while True:
         os.system('clear')
-        utils.print_menu_name("Firewall > OUTPUT Chain")
+        utils.print_menu_name("Firewall > INPUT Chain")
 
         options = [
             "Add rule",
@@ -96,24 +94,23 @@ def manage_output_chain():
         choice = utils.show_menu(menu)
 
         if choice == 0:
-            output_add_rule()
+            input_add_rule()
         elif choice == 1:
-            remove_rule("OUTPUT")
+            remove_rule("INPUT")
             try:
                 input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
             except KeyboardInterrupt:
                 pass
         elif choice == 3:
-            flush_chain("OUTPUT")
+            flush_chain("INPUT")
         elif choice == 4:
-            toggle_policy("OUTPUT")
+            toggle_policy("INPUT")
             try:
                 input(f"\n{utils.GRAY}Press Enter to continue...{utils.RESET}")
             except KeyboardInterrupt:
                 pass
         elif choice == 6:
-            show_chain("OUTPUT")
+            show_chain("INPUT")
         elif choice == 7 or choice is None:
             break
-
         last = choice

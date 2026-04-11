@@ -2,11 +2,11 @@ from simple_term_menu import TerminalMenu
 import subprocess
 import os
 from modules import utils
-from modules.fw_shared import discard_changes, save_rules, edit_rules, show_chain, get_policy
-from modules.fw_input import manage_input_chain
-from modules.fw_output import manage_output_chain
-from modules.fw_forward import manage_forward_chain
-from modules.fw_nat import manage_prerouting, manage_postrouting
+from .shared import discard_changes, save_rules, edit_rules, show_chain, get_policy
+from .input import manage_input_chain
+from .output import manage_output_chain
+from .forward import manage_forward_chain
+from .nat import manage_prerouting, manage_postrouting
 
 
 
