@@ -17,10 +17,17 @@ def install_dhcp():
 
     utils.log("Installing isc-dhcp-server...", "info")
     subprocess.run(["sudo", "apt", "update"])
+
+    # zakáž autostart během instalace
+    subprocess.run(["sudo", "bash", "-c", "echo 'exit 101' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d"])
+
     subprocess.run([
         "sudo", "apt", "install", "isc-dhcp-server", "-y",
         "-o", "Dpkg::Options::=--force-confnew"
     ])
+
+    # obnov autostart
+    subprocess.run(["sudo", "rm", "-f", "/usr/sbin/policy-rc.d"])
 
     # zapiš config PO instalaci
     try:
@@ -37,6 +44,14 @@ def install_dhcp():
         utils.log(f"Failed to write config: {e}", "error")
         utils.pause()
         return
+
+    # nastartuj service
+    utils.log("Starting DHCP service...", "info")
+    result = subprocess.run(["sudo", "systemctl", "start", DHCP_SERVICE], capture_output=True, text=True)
+    if result.returncode == 0:
+        utils.log("DHCP service started.", "success")
+    else:
+        utils.log("Service start failed — add a subnet first.", "error")
 
     if is_installed():
         utils.log(f"isc-dhcp-server installed on {iface}.", "success")
