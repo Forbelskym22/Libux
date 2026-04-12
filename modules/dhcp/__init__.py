@@ -3,7 +3,8 @@ import subprocess
 from modules import utils
 from .subnets import manage_subnets
 from .leases import manage_leases
-from .service import manage_service
+from .service import manage_service, is_installed, install_dhcp
+
 
 
 def show_dhcp_menu():
@@ -38,4 +39,15 @@ def show_dhcp_menu():
 
 
 def run():
-    show_dhcp_menu()
+    if not is_installed():
+        os.system("clear")
+        utils.print_menu_name("DHCP Server")
+        utils.log("isc-dhcp-server is not installed.", "error")
+        confirm = utils.choose(["Install", "Back"])
+        if confirm == "Install":
+            install_dhcp()
+        else:
+            return
+
+    if is_installed():
+        show_dhcp_menu()
