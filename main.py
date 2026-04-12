@@ -5,21 +5,25 @@ from modules import firewall
 from modules import utils
 from modules import settings
 from modules import netwerk
+from modules import dhcp
 
 def main():
     if os.geteuid() != 0:
         utils.log("This script requires root permissions. Run with sudo.", "error")
         sys.exit(1)
     options = [
-        "Firewall (iptables)",
-        "Netwerk",
-        "Settings",
-        "",
-        "Ukončit Libux"]
+        "Firewall (iptables)", # 0
+        "Netwerk",             # 1
+        "DHCP",                # 2
+        "",                    # 3
+        "Settings",            # 4 
+        "",                    # 5
+        "Exit Libux"           # 6
+        ]  
     last = 0
     while True:
         os.system('clear')
-        utils.print_menu_name("Libux v0.2.0")  
+        utils.print_menu_name("Libux v0.2.0")
         terminal_menu = utils.create_menu(options,last)
 
         menu_entry_index = utils.show_menu(terminal_menu)
@@ -29,9 +33,11 @@ def main():
         elif menu_entry_index == 1:
             netwerk.run()
         elif menu_entry_index == 2:
+            dhcp.run()
+        elif menu_entry_index == 4:
             settings.manage_settings()
-        elif menu_entry_index == 4 or menu_entry_index is None:
-            utils.log("Ukončuji Libux...", "info")
+        elif menu_entry_index == 6 or menu_entry_index is None:
+            utils.log("Exiting Libux...", "info")
             sys.exit(0)
  
         last = menu_entry_index
