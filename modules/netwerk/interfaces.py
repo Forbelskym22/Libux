@@ -55,7 +55,30 @@ def show_interfaces(pause=True):
 
 
 def toggle_interface():
-    pass
+    os.system("clear")
+    utils.print_menu_name("Enable / Disable interface")
+    show_interfaces(pause=False)
+
+    iface = utils.pick_interface()
+    if iface is None:
+        return
+    
+    interfaces = get_interfaces()
+    state = next(((i["state"] for i in interfaces if i["name"] == iface)),"DOWN")
+
+    current = utils.GREEN + "UP" + utils.RESET if state == "UP" else utils.RED + "DOWN" + utils.RESET
+    utils.log(f"{iface} is currently {current}", "info")
+
+    action = utils.choose(["up","down"], f"Set {iface} to")
+    if action is None:
+        return
+    
+    result = subprocess.run(["sudo", "ip", "link", "set", iface, action], capture_output=True, text=True)
+    if result.returncode == 0:
+        utils.log(f"{iface} set {action}.", "success")
+    else:
+        utils.log(result.stderr.strip(), "error")
+    utils.pause()
 
 def add_ip():
     os.system("clear")
@@ -108,7 +131,7 @@ def add_ip():
 
 def remove_ip():
     os.system("clear")
-    utils.print_menu_name("Add IP address")
+    utils.print_menu_name("Remove IP address")
     show_interfaces(pause=False)
 
     iface = utils.pick_interface()
@@ -202,7 +225,7 @@ def manage_interfaces():
             "Back"
         ]
 
-        menu = utils.create_menu(options)
+        menu = utils.create_menu(options, last)
         choice = utils.show_menu(menu)
 
         if choice == 0:
