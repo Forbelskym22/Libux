@@ -261,13 +261,13 @@ def manage_interfaces():
         utils.print_menu_name("Interfaces")
 
         options = [
-            "Show",
-            "Enable / Disable",
-            "Add IP",
-            "Remove IP",
-            "Set DHCP",
-            "",
-            "Back"
+            "Show",             # 0
+            "Enable / Disable", # 1
+            "Add IP",           # 2
+            "Remove IP",        # 3
+            "Set DHCP",         # 4
+            "",                 # 5
+            "Back"              # 6
         ]
 
         menu = utils.create_menu(options, last)
