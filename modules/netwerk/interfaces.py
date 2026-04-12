@@ -1,11 +1,15 @@
 import os
 import subprocess
+import re
 from modules import utils
-from .shared import get_interface_ips, get_interfaces
+from .shared import get_interface_ips, get_interfaces, ask_interface_ip
+
+INTERFACES_FILE="/etc/network/interfaces"
 
 def get_mac(iface):
     result = subprocess.run(["cat", f"/sys/class/net/{iface}/address"], capture_output=True, text=True)
     return result.stdout.strip()
+
 
 def show_interfaces(pause=True):
     os.system("clear")
@@ -54,10 +58,130 @@ def toggle_interface():
     pass
 
 def add_ip():
-    pass
+    os.system("clear")
+    utils.print_menu_name("Add IP address")
+    show_interfaces(pause=False)
+
+    iface = utils.pick_interface()
+    if iface is None:
+        return
+
+    ip = ask_interface_ip()
+    if not ip:
+        return
+    
+    try:
+        with open(INTERFACES_FILE, "r") as f:
+            content = f.read()
+
+        pattern = rf"(iface {re.escape(iface)} inet static[^\n]*\n(?:[ \t]+[^\n]*\n)*)"
+        match = re.search(pattern, content)
+
+        if match:
+            block = match.group(1)
+            label_count = len(re.findall(r"up\s+/sbin/ip addr add", block))
+            label = f"{iface}:{label_count}"
+
+            new_lines = (
+                f"    up   /sbin/ip addr add {ip} dev $IFACE label {label}\n"
+                f"    down /sbin/ip addr del {ip} dev $IFACE label {label}\n"
+            )
+            new_block = block.rstrip("\n") + "\n" + new_lines
+            new_content = content[:match.start()] + new_block + content[match.end():]
+        else:
+            new_content = content.rstrip() + f"\n\niface {iface} inet static\n    address {ip}\n"
+
+        with open(INTERFACES_FILE, "w") as f:
+            f.write(new_content)
+
+        utils.log(f"{ip} added to {iface}.", "success")
+
+    except Exception as e:
+        utils.log(f"Failed to write {INTERFACES_FILE}: {e}", "error")
+        utils.pause()
+        return
+
+    utils.log("Restarting networking service...", "info")
+    subprocess.run(["sudo", "systemctl", "restart", "networking"])
+    utils.pause()
+
 
 def remove_ip():
-    pass
+    os.system("clear")
+    utils.print_menu_name("Add IP address")
+    show_interfaces(pause=False)
+
+    iface = utils.pick_interface()
+    if iface is None:
+        return
+    
+    try:
+        with open(INTERFACES_FILE, "r") as f:
+            content = f.read()
+
+        pattern = rf"(iface {re.escape(iface)} inet static[^\n]*\n(?:[ \t]+[^\n]*\n)*)"
+        match = re.search(pattern, content)
+
+        if not match:
+            utils.log(f"No static config found for {iface}.", "error")
+            utils.pause()
+            return
+
+        block = match.group(1)
+
+        address_match = re.search(r"address\s+(\S+)", block)
+        primary_ip = address_match.group(1) if address_match else None
+
+        extra_ips = re.findall(r"up\s+/sbin/ip addr add (\S+) dev", block)
+
+        all_ips = []
+        if primary_ip:
+            all_ips.append(primary_ip)
+        all_ips.extend(extra_ips)
+
+        if not all_ips:
+            utils.log(f"No IP addresses found for {iface}.", "error")
+            utils.pause()
+            return
+
+        ip = utils.choose(all_ips, f"Select IP to remove from {iface}")
+        if ip is None:
+            return
+
+        if ip == primary_ip:
+            if extra_ips:
+                new_primary = extra_ips[0]
+                new_block = block
+                new_block = re.sub(r"address\s+\S+", f"address {new_primary}", new_block)
+                new_block = re.sub(
+                    rf"[ \t]+up\s+/sbin/ip addr add {re.escape(new_primary)} dev \$IFACE label \S+\n"
+                    rf"[ \t]+down\s+/sbin/ip addr del {re.escape(new_primary)} dev \$IFACE label \S+\n",
+                    "", new_block
+                )
+            else:
+                new_block = ""
+        else:
+            new_block = re.sub(
+                rf"[ \t]+up\s+/sbin/ip addr add {re.escape(ip)} dev \$IFACE label \S+\n"
+                rf"[ \t]+down\s+/sbin/ip addr del {re.escape(ip)} dev \$IFACE label \S+\n",
+                "", block
+            )
+
+        new_content = content[:match.start()] + new_block + content[match.end():]
+
+        with open(INTERFACES_FILE, "w") as f:
+            f.write(new_content)
+
+        utils.log(f"{ip} removed from {iface}.", "success")
+
+    except Exception as e:
+        utils.log(f"Failed to write {INTERFACES_FILE}: {e}", "error")
+        utils.pause()
+        return
+
+    utils.log("Restarting networking service...", "info")
+    subprocess.run(["sudo", "systemctl", "restart", "networking"])
+    utils.pause()
 
 def set_dhcp():
     pass
@@ -72,6 +196,7 @@ def manage_interfaces():
             "Show",
             "Enable / Disable",
             "Add IP",
+            "Remove IP",
             "Set DHCP",
             "",
             "Back"

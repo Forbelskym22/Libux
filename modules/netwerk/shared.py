@@ -1,5 +1,6 @@
 import subprocess
-
+import ipaddress
+from modules import utils
 
 def get_interfaces():
     result = subprocess.run(["ip", "-o", "link", "show"], capture_output=True, text=True)
@@ -21,3 +22,15 @@ def get_interface_ips(iface):
             idx = parts.index("inet")
             ips.append(parts[idx + 1])
     return ips
+
+def ask_interface_ip(prompt="IP/prefix (e.g. 192.168.1.10/24)"):
+    while True:
+        value = utils.ask_required(prompt)
+        if value is None:
+            return None
+        try:
+            ipaddress.ip_interface(value)
+            return value
+        except ValueError:
+            utils.log("Invalid IP/prefix.", "error")
+

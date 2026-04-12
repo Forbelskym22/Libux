@@ -32,6 +32,7 @@ word_colors = {
 
 VERBOSE = False
 
+
 def create_menu(options, cursor_index=0):
     return TerminalMenu(
         options,
