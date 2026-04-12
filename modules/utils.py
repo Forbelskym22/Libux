@@ -108,16 +108,18 @@ def choose(options, message="", type= "info"):
     return options[choice]
 
 
-def pick_interface(text =""):
+def pick_interface(text="", exclude=None):
     cmd = ["ip", "-o", "link", "show"]
     result = subprocess.run(cmd, capture_output=True, text=True)
     interfaces = [line.split()[1].strip(":") for line in result.stdout.splitlines()]
 
+    if exclude:
+        interfaces = [i for i in interfaces if i not in exclude]
 
     message = "choose interface"
-    if text != "":
+    if text:
         message = message + f" ({text})"
-    log(message,"info")
+    log(message, "info")
 
     menu = TerminalMenu(interfaces, cycle_cursor=True, clear_screen=False, menu_cursor_style=MENU_CURSOR_STYLE)
     choice = show_menu(menu)
