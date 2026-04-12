@@ -2,7 +2,7 @@ import os
 import subprocess
 import re
 from modules import utils
-from .shared import get_interface_ips, get_interfaces, ask_interface_ip
+from .shared import get_interfaces, ask_interface_ip
 
 INTERFACES_FILE="/etc/network/interfaces"
 
@@ -207,7 +207,52 @@ def remove_ip():
     utils.pause()
 
 def set_dhcp():
-    pass
+    os.system("clear")
+    utils.print_menu_name("Set DHCP")
+    show_interfaces(pause=False)
+
+    iface = utils.pick_interface()
+    if iface is None:
+        return
+    
+    try:
+        with open(INTERFACES_FILE, "r") as f:
+            content = f.read()
+
+        pattern = rf"iface {re.escape(iface)} inet static[^\n]*\n(?:[ \t]+[^\n]*\n)*"
+        match = re.search(pattern, content)
+
+        if match:
+            confirm = utils.choose(["yes", "no"], f"This will remove static config for {iface}. Proceed?", "error")
+            if confirm != "yes":
+                return
+            new_content = content[:match.start()] + content[match.end():]
+            with open(INTERFACES_FILE, "w") as f:
+                f.write(new_content)
+            utils.log(f"Static config for {iface} removed.", "success")
+
+    except Exception as e:
+        utils.log(f"Failed to write {INTERFACES_FILE}: {e}", "error")
+        utils.pause()
+        return
+
+    try:
+        with open(INTERFACES_FILE, "r") as f:
+            content = f.read()
+
+        if f"iface {iface} inet dhcp" not in content:
+            with open(INTERFACES_FILE, "a") as f:
+                f.write(f"\niface {iface} inet dhcp\n")
+            utils.log(f"DHCP config for {iface} added.", "success")
+
+    except Exception as e:
+        utils.log(f"Failed to write {INTERFACES_FILE}: {e}", "error")
+        utils.pause()
+        return
+
+    utils.log("Restarting networking service...", "info")
+    subprocess.run(["sudo", "systemctl", "restart", "networking"])
+    utils.pause()
 
 def manage_interfaces():
     last = 0
