@@ -3,7 +3,7 @@ A text-based interface application designed for basic configuration of a Linux s
 
 ## Features
 - [x] Firewall (iptables)
-- [ ] Network connectivity
+- [x] Network connectivity
 - [ ] DHCP
 - [ ] SSH
 - [ ] Apache2
@@ -14,7 +14,8 @@ A text-based interface application designed for basic configuration of a Linux s
 - [ ] MariaDB
 
 > Implemented in v0.1.0: Firewall (iptables)  
-> Planned for future releases: Network connectivity, DHCP, SSH, Apache2, Routing, Users and groups, Disk quotas, Permissions, MariaDB
+> Implemented in v0.2.0: Network connectivity  
+> Planned for future releases: DHCP, SSH, Apache2, Routing, Users and groups, Disk quotas, Permissions, MariaDB
 
 
 ## Requirements

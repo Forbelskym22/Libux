@@ -19,7 +19,7 @@ def main():
     last = 0
     while True:
         os.system('clear')
-        utils.print_menu_name("Libux v0.1.0")  
+        utils.print_menu_name("Libux v0.2.0")  
         terminal_menu = utils.create_menu(options,last)
 
         menu_entry_index = utils.show_menu(terminal_menu)
