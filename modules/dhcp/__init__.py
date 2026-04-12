@@ -1,10 +1,8 @@
 import os
-import subprocess
 from modules import utils
-from .subnets import manage_subnets
+from .subnets import manage_subnets, add_subnet
 from .leases import manage_leases
-from .service import manage_service, is_installed, install_dhcp
-
+from .service import manage_service, is_installed, install_dhcp, has_subnet
 
 
 def show_dhcp_menu():
@@ -13,6 +11,11 @@ def show_dhcp_menu():
     while True:
         os.system("clear")
         utils.print_menu_name("DHCP Server")
+
+        # upozorni pokud není subnet
+        if not has_subnet():
+            utils.log("No subnet configured — service won't start without one.", "info")
+            print()
 
         options = [
             "Subnets",      # 0

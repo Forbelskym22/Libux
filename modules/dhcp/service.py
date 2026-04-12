@@ -1,67 +1,71 @@
 import os
 import subprocess
 from modules import utils
-from .shared import DHCP_SERVICE, DHCP_CONFIG
+from .shared import DHCP_SERVICE, DHCP_CONFIG, DHCP_DEFAULTS, DEFAULT_CONFIG
+
 
 def is_installed():
     return utils.is_binary_installed("dhcpd")
+
 
 def has_subnet():
     try:
         with open(DHCP_CONFIG, "r") as f:
             return "subnet" in f.read()
-    except:
+    except FileNotFoundError:
         return False
+
 
 def install_dhcp():
     os.system("clear")
     utils.print_menu_name("Install DHCP Server")
 
-    # vyber interface
-    iface = utils.pick_interface("DHCP server interface", exclude=["lo"])
-    if iface is None:
+    utils.log("Installing isc-dhcp-server...", "info")
+
+    # apt update
+    result = subprocess.run(["sudo", "apt", "update"], capture_output=True, text=True)
+    if result.returncode != 0:
+        utils.log("apt update failed.", "error")
+        utils.pause()
         return
 
-    utils.log("Installing isc-dhcp-server...", "info")
-    subprocess.run(["sudo", "apt", "update"])
+    # zakaž autostart - služba bez subnetu spadne
+    subprocess.run(
+        ["sudo", "bash", "-c",
+         "echo 'exit 101' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d"],
+        capture_output=True, text=True
+    )
 
-    # zakáž autostart během instalace
-    subprocess.run(["sudo", "bash", "-c", "echo 'exit 101' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d"])
-
-    subprocess.run([
-        "sudo", "apt", "install", "isc-dhcp-server", "-y",
-        "-o", "Dpkg::Options::=--force-confnew"
-    ])
+    result = subprocess.run(
+        ["sudo", "apt", "install", "isc-dhcp-server", "-y",
+         "-o", "Dpkg::Options::=--force-confnew"],
+        capture_output=True, text=True
+    )
 
     # obnov autostart
-    subprocess.run(["sudo", "rm", "-f", "/usr/sbin/policy-rc.d"])
+    subprocess.run(["sudo", "rm", "-f", "/usr/sbin/policy-rc.d"],
+                    capture_output=True, text=True)
 
-    # zapiš config PO instalaci
+    if result.returncode != 0:
+        utils.log("Installation failed.", "error")
+        utils.pause()
+        return
+
+    # zapiš výchozí config — interfacy se přidají při přidání subnetu
     try:
-        import pathlib
-        pathlib.Path("/etc/dhcp").mkdir(parents=True, exist_ok=True)
         with open(DHCP_CONFIG, "w") as f:
-            f.write("# Libux DHCP configuration\n")
-            f.write("default-lease-time 600;\n")
-            f.write("max-lease-time 7200;\n")
-        with open("/etc/default/isc-dhcp-server", "w") as f:
-            f.write(f'INTERFACESv4="{iface}"\n')
+            f.write(DEFAULT_CONFIG)
+        with open(DHCP_DEFAULTS, "w") as f:
+            f.write('INTERFACESv4=""\n')
             f.write('INTERFACESv6=""\n')
     except Exception as e:
         utils.log(f"Failed to write config: {e}", "error")
         utils.pause()
         return
 
-    # nastartuj service
-    utils.log("Starting DHCP service...", "info")
-    result = subprocess.run(["sudo", "systemctl", "start", DHCP_SERVICE], capture_output=True, text=True)
-    if result.returncode == 0:
-        utils.log("DHCP service started.", "success")
-    else:
-        utils.log("Service start failed — add a subnet first.", "error")
-
     if is_installed():
-        utils.log(f"isc-dhcp-server installed on {iface}.", "success")
+        utils.log("isc-dhcp-server installed.", "success")
+        utils.log("Add a subnet to configure an interface and start the service.", "info")
     else:
         utils.log("Installation failed.", "error")
 
@@ -70,53 +74,57 @@ def install_dhcp():
 
 def show_status():
     os.system("clear")
-    utils.print_menu_name("DHCP Service status")
-    subprocess.run(["systemctl", "status", DHCP_SERVICE])
+    utils.print_menu_name("DHCP Service Status")
+    subprocess.run(["sudo", "systemctl", "status", DHCP_SERVICE, "--no-pager"])
     utils.pause()
+
 
 def start_service():
     if not has_subnet():
         utils.log("No subnet configured. Add a subnet first.", "error")
         utils.pause()
         return
-    try:
-        result = subprocess.run(["sudo", "systemctl", "start", DHCP_SERVICE], capture_output=True, text=True)
-        if result.returncode == 0:
-            utils.log("DHCP service started.", "success")
-        else:
-            utils.log(result.stderr.strip(), "error")
-    except KeyboardInterrupt:
-        utils.log("Cancelled.", "info")
+    result = subprocess.run(
+        ["sudo", "systemctl", "start", DHCP_SERVICE],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        utils.log("DHCP service started.", "success")
+    else:
+        utils.log(result.stderr.strip(), "error")
     utils.pause()
 
+
 def stop_service():
-    try:
-        result = subprocess.run(["sudo", "systemctl", "stop", DHCP_SERVICE], capture_output=True, text=True)
-        if result.returncode == 0:
-            utils.log("DHCP service stopped.", "success")
-        else:
-            utils.log(result.stderr.strip(), "error")
-    except KeyboardInterrupt:
-        utils.log("Cancelled.", "info")
+    result = subprocess.run(
+        ["sudo", "systemctl", "stop", DHCP_SERVICE],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        utils.log("DHCP service stopped.", "success")
+    else:
+        utils.log(result.stderr.strip(), "error")
     utils.pause()
+
 
 def restart_service():
     if not has_subnet():
         utils.log("No subnet configured. Add a subnet first.", "error")
         utils.pause()
         return
-    try:
-        subprocess.run(["sudo", "systemctl", "reset-failed", DHCP_SERVICE], capture_output=True, text=True)
-        result = subprocess.run(["sudo", "systemctl", "restart", DHCP_SERVICE], capture_output=True, text=True)
-        if result.returncode == 0:
-            utils.log("DHCP service restarted.", "success")
-        else:
-            utils.log("Service failed to restart. Check status or add a subnet first.", "error")
-    except KeyboardInterrupt:
-        utils.log("Cancelled.", "info")
+    subprocess.run(
+        ["sudo", "systemctl", "reset-failed", DHCP_SERVICE],
+        capture_output=True, text=True
+    )
+    result = subprocess.run(
+        ["sudo", "systemctl", "restart", DHCP_SERVICE],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        utils.log("DHCP service restarted.", "success")
+    else:
+        utils.log("Restart failed. Check: systemctl status isc-dhcp-server", "error")
     utils.pause()
-
-
 
 
 def manage_service():
