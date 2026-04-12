@@ -38,7 +38,7 @@ def create_menu(options, cursor_index=0):
         options,
         cursor_index=cursor_index,
         cycle_cursor=True,
-        clear_screen=True,
+        clear_screen=False,
         skip_empty_entries=True,
         menu_cursor_style=MENU_CURSOR_STYLE
     )
