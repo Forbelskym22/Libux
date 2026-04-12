@@ -2,6 +2,11 @@ import os
 import subprocess
 from simple_term_menu import TerminalMenu
 from modules import utils
+from .interfaces import manage_interfaces
+from .dns import manage_dns
+from .gateway import manage_gateway
+from .hostname import manage_hostname
+from .vlan import manage_vlan
 
 
 def show_network_menu():
