@@ -183,13 +183,25 @@ def _manage_user_list(key, title):
                 utils.log("No users to remove.", "error")
                 utils.pause()
                 continue
-            user = utils.choose(users, "Select user to remove")
-            if user is None:
+            user_choice = utils.choose(users, "Select user to remove")
+            if user_choice is None:
                 continue
-            users.remove(user)
-            set_config_value(key, " ".join(users))
-            utils.log(f"{user} removed. Restart SSH to apply.", "success")
+            users.remove(user_choice)
+            if users:
+                set_config_value(key, " ".join(users))
+            else:
+                # odstraň řádek úplně
+                try:
+                    with open(SSHD_CONFIG, "r") as f:
+                        lines = f.readlines()
+                    new_lines = [l for l in lines if not re.match(rf"^{re.escape(key)}\s", l, re.IGNORECASE)]
+                    with open(SSHD_CONFIG, "w") as f:
+                        f.writelines(new_lines)
+                except Exception as e:
+                    utils.log(f"Failed to write config: {e}", "error")
+            utils.log(f"{user_choice} removed. Restart SSH to apply.", "success")
             utils.pause()
+
 
         elif choice == 3 or choice is None:
             break
