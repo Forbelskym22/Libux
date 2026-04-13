@@ -5,7 +5,7 @@ A text-based interface application designed for basic configuration of a Linux s
 - [x] Firewall (iptables)
 - [x] Network connectivity
 - [x] DHCP
-- [ ] SSH
+- [x] SSH
 - [ ] Apache2
 - [ ] Routing
 - [ ] Users and groups
