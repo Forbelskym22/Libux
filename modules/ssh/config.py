@@ -52,14 +52,13 @@ DEFAULTS = {
     "MaxAuthTries": "6",
     "AllowUsers": "all",
     "DenyUsers": "none",
-    "Banner": "none",
 }
 
 def show_config(pause=True):
     os.system("clear")
     utils.print_menu_name("SSH Config")
 
-    keys = ["Port", "PermitRootLogin", "PasswordAuthentication", "MaxAuthTries", "AllowUsers", "DenyUsers", "Banner"]
+    keys = ["Port", "PermitRootLogin", "PasswordAuthentication", "MaxAuthTries", "AllowUsers", "DenyUsers"]
 
     for key in keys:
         value = get_config_value(key)
@@ -130,16 +129,79 @@ def set_password_auth():
     utils.pause() 
 
 def set_max_auth_tries():
-    pass
+    os.system("clear")
+    utils.print_menu_name("Set max auth tries")
+    current = get_config_value("MaxAuthTries") or "6"
+    utils.log(f"Current: {current}", "info")
+
+    while True:
+        number = utils.ask_required("Maximum number of tries")
+        if number is None:
+            return
+        if number.isdigit() and int(number) > 0:
+            break
+        utils.log("Invalid number.", "error")
+
+    if set_config_value("MaxAuthTries", number):
+        utils.log(f"MaxAuthTries set to {number}. Restart SSH to apply.", "success")
+    utils.pause()
+
+
+def _manage_user_list(key, title):
+    while True:
+        os.system("clear")
+        utils.print_menu_name(title)
+
+        raw = get_config_value(key)
+        users = raw.split() if raw else []
+
+        if users:
+            for u in users:
+                print(f"  {utils.YELLOW}{u}{utils.RESET}")
+        else:
+            utils.log("No users configured.", "info")
+        print()
+
+        options = ["Add user", "Remove user", "", "Back"]
+        menu = utils.create_menu(options)
+        choice = utils.show_menu(menu)
+
+        if choice == 0:
+            user = utils.ask_required("Username")
+            if user is None:
+                continue
+            if user in users:
+                utils.log(f"{user} is already in the list.", "error")
+            else:
+                users.append(user)
+                set_config_value(key, " ".join(users))
+                utils.log(f"{user} added. Restart SSH to apply.", "success")
+            utils.pause()
+
+        elif choice == 1:
+            if not users:
+                utils.log("No users to remove.", "error")
+                utils.pause()
+                continue
+            user = utils.choose(users, "Select user to remove")
+            if user is None:
+                continue
+            users.remove(user)
+            set_config_value(key, " ".join(users))
+            utils.log(f"{user} removed. Restart SSH to apply.", "success")
+            utils.pause()
+
+        elif choice == 3 or choice is None:
+            break
+
 
 def set_allow_users():
-    pass
+    _manage_user_list("AllowUsers", "AllowUsers")
+
 
 def set_deny_users():
-    pass
+    _manage_user_list("DenyUsers", "DenyUsers")
 
-def set_banner():
-    pass
 
 def manage_config():
     last = 0
@@ -155,9 +217,8 @@ def manage_config():
             "MaxAuthTries",             # 4
             "AllowUsers",               # 5
             "DenyUsers",                # 6
-            "Banner",                   # 7
-            "",                         # 8
-            "Back",                     # 9
+            "",                         # 7
+            "Back",                     # 8
         ]
 
         menu = utils.create_menu(options, last)
@@ -177,9 +238,7 @@ def manage_config():
             set_allow_users()
         elif choice == 6:
             set_deny_users()
-        elif choice == 7:
-            set_banner()
-        elif choice == 9 or choice is None:
+        elif choice == 8 or choice is None:
             return
 
         last = choice
