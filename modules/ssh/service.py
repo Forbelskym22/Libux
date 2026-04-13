@@ -1,7 +1,7 @@
 import os
 import subprocess
 from modules import utils
-from .shared import SSH_SERVICE, SSHD_CONFIG
+from .shared import SSH_SERVICE
 
 def is_installed():
     return utils.is_binary_installed("sshd")
