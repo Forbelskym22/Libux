@@ -29,9 +29,9 @@ def show_ssh_menu():
             manage_service()
         elif choice == 1:
             manage_config()
-        elif choice == 2:
-            manage_keys()
         elif choice == 3:
+            manage_keys()
+        elif choice == 2:
             show_sessions()
         elif choice == 5 or choice is None:
             return
