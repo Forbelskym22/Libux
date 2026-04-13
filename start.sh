@@ -1,12 +1,12 @@
 #!/bin/bash
 
 if [ "$EUID" -ne 0 ]; then
-    echo "Please run as root: sudo bash run.sh"
+    echo "Please run as root: sudo ./start.sh"
     exit 1
 fi
 
 if [ ! -d "venv" ]; then
-    echo "venv not found. Run install.sh first."
+    echo "venv not found. Run ./install.sh first."
     exit 1
 fi
 
