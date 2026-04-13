@@ -33,6 +33,7 @@ def show_status():
     os.system("clear")
     utils.print_menu_name("SSH Service status")
     subprocess.run(["sudo", "systemctl", "status", SSH_SERVICE, "--no-pager"])
+    utils.pause()
 
 def start_service():
     try:
@@ -41,7 +42,7 @@ def start_service():
             capture_output=True, text=True
         )
         if result.returncode == 0:
-            utils.log("SSH service started.", "error")
+            utils.log("SSH service started.", "success")
     except KeyboardInterrupt:
         utils.log("Cancelled.", "info")
     utils.pause()
@@ -54,7 +55,7 @@ def stop_service():
             capture_output=True, text=True
         )
         if result.returncode == 0:
-            utils.log("SSH service stopped.", "error")
+            utils.log("SSH service stopped.", "success")
     except KeyboardInterrupt:
         utils.log("Cancelled.", "info")
     utils.pause()
@@ -66,7 +67,7 @@ def restart_service():
             capture_output=True, text=True
         )
         if result.returncode == 0:
-            utils.log("SSH service restarted.", "error")
+            utils.log("SSH service restarted.", "success")
     except KeyboardInterrupt:
         utils.log("Cancelled.", "info")
     utils.pause()

@@ -7,7 +7,7 @@ from .config import manage_config
 from .keys import manage_keys
 from .sessions import show_sessions
 
-def show_network_menu():
+def show_ssh_menu():
     last = 0
     while True:
         os.system("clear")
