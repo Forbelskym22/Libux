@@ -6,6 +6,7 @@ from modules import utils
 from modules import settings
 from modules import netwerk
 from modules import dhcp
+from modules import ssh
 
 def main():
     if os.geteuid() != 0:
@@ -15,10 +16,11 @@ def main():
         "Firewall (iptables)", # 0
         "Netwerk",             # 1
         "DHCP",                # 2
-        "",                    # 3
-        "Settings",            # 4 
-        "",                    # 5
-        "Exit Libux"           # 6
+        "SSH",                 # 3
+        "",                    # 4
+        "Settings",            # 5 
+        "",                    # 6
+        "Exit Libux"           # 7
         ]  
     last = 0
     while True:
@@ -34,9 +36,11 @@ def main():
             netwerk.run()
         elif menu_entry_index == 2:
             dhcp.run()
-        elif menu_entry_index == 4:
+        elif menu_entry_index == 3:
+            ssh.run()
+        elif menu_entry_index == 5:
             settings.manage_settings()
-        elif menu_entry_index == 6 or menu_entry_index is None:
+        elif menu_entry_index == 7 or menu_entry_index is None:
             utils.log("Exiting Libux...", "info")
             sys.exit(0)
  
