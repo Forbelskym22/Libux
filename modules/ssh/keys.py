@@ -15,7 +15,7 @@ def get_system_users():
         parts = line.split(":")
         if len(parts) >= 7 and parts[6] in ("/bin/bash", "/bin/sh", "/usr/bin/bash", "/usr/bin/zsh"):
             users.append(parts[0])
-        return users
+    return users
 
 def list_keys(user, pause=False):
     path = get_auth_keys_path(user)
@@ -42,8 +42,9 @@ def show_keys(user, pause=True):
             parts = key.split()
             key_type = parts[0] if len(parts) >= 1 else ""
             comment = parts[2] if len(parts) >= 3 else ""
-            fingerprint = parts[1][:20] + "..." if len(parts) >= 2 else ""
-            print(f"   {utils.PURPLE}{i+1}.{utils.RESET} {utils.YELLOW}{key_type}{utils.RESET} {utils.GRAY}{fingerprint}{utils.RESET} {utils.WHITE}{comment}{utils.RESET}")
+            print(f"  {utils.PURPLE}{i+1}.{utils.RESET} {utils.YELLOW}{key_type}{utils.RESET} {utils.WHITE}{comment}{utils.RESET}")
+            print(f"     {utils.GRAY}{key}{utils.RESET}")
+            print()
 
     if pause:
         utils.pause()
@@ -120,6 +121,55 @@ def remove_key(user):
         utils.log(f"Failed: {e}", "error")
     utils.pause()
 
+def generate_key(user):
+    os.system("clear")
+    utils.print_menu_name(f"Generate SSH key — {user}")
+
+    key_type = utils.choose(["ed25519", "rsa", "ecdsa"], "Key type")
+    if key_type is None:
+        return
+
+    home = "/root" if user == "root" else f"/home/{user}"
+
+    name = utils.ask("Key filename (Enter for default)")
+    if name is None:
+        return
+    filename = name if name else f"id_{key_type}"
+    path = f"{home}/.ssh/{filename}"
+
+    utils.log(f"Generating {key_type} key...", "info")
+    try:
+        result = subprocess.run(
+            ["sudo", "-u", user, "ssh-keygen", "-t", key_type, "-f", path, "-N", ""],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            utils.log(f"Key generated: {path}", "success")
+            pub = subprocess.run(["sudo", "cat", f"{path}.pub"], capture_output=True, text=True)
+            print(f"\n  {utils.YELLOW}{pub.stdout.strip()}{utils.RESET}\n")
+            print(f"  {utils.WHITE}Copy the PUBLIC key above to the client machine")
+            print(f"  and add it to ~/.ssh/authorized_keys, or use ssh-copy-id.")
+            print(f"  Private key is at: {utils.YELLOW}{path}{utils.RESET}")
+            print(f"  Client connects with: {utils.YELLOW}ssh -i {path} {user}@<server-ip>{utils.RESET}")
+
+            public_key = pub.stdout.strip()
+            add_to_auth = utils.choose(["yes", "no"], "Add public key to authorized_keys?")
+            if add_to_auth == "yes":
+                auth_path = get_auth_keys_path(user)
+                subprocess.run(
+                    ["sudo", "bash", "-c", f"mkdir -p {home}/.ssh && echo '{public_key}' >> {auth_path} && chmod 600 {auth_path}"],
+                    capture_output=True, text=True
+                )
+                utils.log("Public key added to authorized_keys.", "success")
+
+
+        else:
+            utils.log(result.stderr.strip(), "error")
+    except KeyboardInterrupt:
+        pass
+    utils.pause()
+
+
 def manage_keys():
     users = get_system_users()
     if not users:
@@ -137,11 +187,12 @@ def manage_keys():
         utils.print_menu_name(f"Keys — {user}")
 
         options = [
-            "Show",     # 0
-            "Add",      # 1
-            "Remove",   # 2
-            "",         # 3
-            "Back",     # 4
+            "Show",         # 0
+            "Add",          # 1
+            "Remove",       # 2
+            "Generate",     # 3
+            "",             # 4
+            "Back",         # 5
         ]
 
         menu = utils.create_menu(options, last)
@@ -153,7 +204,9 @@ def manage_keys():
             add_key(user)
         elif choice == 2:
             remove_key(user)
-        elif choice == 4 or choice is None:
+        elif choice == 3:
+            generate_key(user)
+        elif choice == 5 or choice is None:
             return
 
         last = choice
