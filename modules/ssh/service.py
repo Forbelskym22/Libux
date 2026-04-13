@@ -43,6 +43,8 @@ def start_service():
         )
         if result.returncode == 0:
             utils.log("SSH service started.", "success")
+        else:
+            utils.log("SSH service failed to start.", "error")
     except KeyboardInterrupt:
         utils.log("Cancelled.", "info")
     utils.pause()
@@ -56,6 +58,8 @@ def stop_service():
         )
         if result.returncode == 0:
             utils.log("SSH service stopped.", "success")
+        else:
+            utils.log("SSH service failed to stop.", "error")
     except KeyboardInterrupt:
         utils.log("Cancelled.", "info")
     utils.pause()
@@ -68,6 +72,8 @@ def restart_service():
         )
         if result.returncode == 0:
             utils.log("SSH service restarted.", "success")
+        else:
+            utils.log("SSH service failed to restart.", "error")
     except KeyboardInterrupt:
         utils.log("Cancelled.", "info")
     utils.pause()
