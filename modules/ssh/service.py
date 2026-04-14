@@ -4,7 +4,8 @@ from modules import utils
 from .shared import SSH_SERVICE
 
 def is_installed():
-    return utils.is_binary_installed("sshd")
+    result = subprocess.run(["dpkg", "-l", "openssh-server"], capture_output=True)
+    return result.returncode == 0
 
 def install_ssh():
     os.system("clear")
@@ -18,8 +19,7 @@ def install_ssh():
         return
     
     result = subprocess.run(
-        ["sudo", "apt", "install", "openssh-server", "-y"],
-        capture_output=True, text=True
+        ["sudo", "apt", "install", "openssh-server", "-y"]
     )
 
     if is_installed():

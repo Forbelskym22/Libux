@@ -5,7 +5,8 @@ from .shared import DHCP_SERVICE, DHCP_CONFIG, DHCP_DEFAULTS, DEFAULT_CONFIG
 
 
 def is_installed():
-    return utils.is_binary_installed("dhcpd")
+    result = subprocess.run(["dpkg", "-l", "isc-dhcp-server"], capture_output=True)
+    return result.returncode == 0
 
 
 def has_subnet():
@@ -38,8 +39,7 @@ def install_dhcp():
 
     result = subprocess.run(
         ["sudo", "apt", "install", "isc-dhcp-server", "-y",
-         "-o", "Dpkg::Options::=--force-confnew"],
-        capture_output=True, text=True
+         "-o", "Dpkg::Options::=--force-confnew"]
     )
 
     # obnov autostart
