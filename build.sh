@@ -16,7 +16,9 @@ BINARY_NAME="libuxv${VERSION}"
 
 echo "Building $BINARY_NAME..."
 
-venv/bin/pip install pyinstaller -q || { echo "Failed to install PyInstaller."; exit 1; }
+if ! venv/bin/python -c "import PyInstaller" 2>/dev/null; then
+    venv/bin/pip install pyinstaller -q || { echo "Failed to install PyInstaller."; exit 1; }
+fi
 
 venv/bin/pyinstaller --onefile --name "$BINARY_NAME" main.py || { echo "Build failed."; exit 1; }
 
