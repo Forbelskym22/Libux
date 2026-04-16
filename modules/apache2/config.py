@@ -91,9 +91,11 @@ def show_config(pause=True):
 
     ports = get_listening_ports()
     ports_str = ", ".join(ports) if ports else "none"
-    print(f"  {utils.WHITE}{'Listen':<24}{utils.YELLOW}{ports_str}{utils.RESET}")
+    print(f"  {utils.WHITE}{'Listen ports':<24}{utils.YELLOW}{ports_str}{utils.RESET}")
+    print(f"  {utils.GRAY}(ports Apache listens on globally - set in ports.conf){utils.RESET}")
+    print()
 
-    keys = ["ServerName", "ServerAdmin", "ServerRoot", "Timeout", "KeepAlive"]
+    keys = ["ServerAdmin", "ServerRoot", "Timeout", "KeepAlive"]
     for key in keys:
         value = get_conf_value(key)
         if value:

@@ -10,6 +10,24 @@ def list_sites(directory):
     except Exception:
         return []
 
+def _parse_vhost_conf(site_conf):
+    info = {"port": "-", "server_name": "-", "doc_root": "-"}
+    result = subprocess.run(["sudo", "cat", f"{SITES_AVAILABLE}/{site_conf}"], capture_output=True, text=True)
+    for line in result.stdout.splitlines():
+        stripped = line.strip()
+        m = __import__("re").match(r"<VirtualHost\s+[^:]+:(\d+)>", stripped, __import__("re").IGNORECASE)
+        if m:
+            info["port"] = m.group(1)
+        if stripped.lower().startswith("servername"):
+            parts = stripped.split()
+            if len(parts) >= 2:
+                info["server_name"] = parts[1]
+        if stripped.lower().startswith("documentroot"):
+            parts = stripped.split()
+            if len(parts) >= 2:
+                info["doc_root"] = parts[1]
+    return info
+
 def show_vhosts(pause=True):
     os.system("clear")
     utils.print_menu_name("Virtual Hosts")
@@ -17,12 +35,20 @@ def show_vhosts(pause=True):
     available = list_sites(SITES_AVAILABLE)
     enabled = list_sites(SITES_ENABLED)
 
-    if available:
-        for site in available:
-            status = f"{utils.GREEN}[enabled]{utils.RESET}" if site in enabled else f"{utils.GRAY}[disabled]{utils.RESET}"
-            print(f"  {utils.YELLOW}{site:<40}{utils.RESET} {status}")
-    else:
+    if not available:
         utils.log("No sites available.", "info")
+        if pause:
+            utils.pause()
+        return
+
+    for site in available:
+        info = _parse_vhost_conf(site)
+        status = f"{utils.GREEN}[enabled]{utils.RESET}" if site in enabled else f"{utils.GRAY}[disabled]{utils.RESET}"
+        print(f"  {utils.YELLOW}{site}{utils.RESET} {status}")
+        print(f"    {utils.WHITE}Port:        {utils.PURPLE}{info['port']}{utils.RESET}")
+        print(f"    {utils.WHITE}ServerName:  {utils.YELLOW}{info['server_name']}{utils.RESET}")
+        print(f"    {utils.WHITE}DocumentRoot:{utils.GRAY} {info['doc_root']}{utils.RESET}")
+        print()
 
     if pause:
         utils.pause()
