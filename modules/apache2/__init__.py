@@ -2,9 +2,8 @@ import os
 from modules import utils
 from .service import manage_service, is_installed, install_apache
 from .config import manage_config
-from .vhosts import manage_vhosts, manage_pages
+from .sites import manage_sites
 from .modules import manage_modules
-from .logs import manage_logs
 
 def show_apache_menu():
     last = 0
@@ -13,14 +12,12 @@ def show_apache_menu():
         utils.print_menu_name("Apache2")
 
         options = [
-            "Service",          # 0
-            "Config",           # 1
-            "Virtual Hosts",    # 2
-            "Page",             # 3
-            "Modules",          # 4
-            "Logs",             # 5
-            "",                 # 6
-            "Back",             # 7
+            "Service",  # 0
+            "Sites",    # 1
+            "Config",   # 2
+            "Modules",  # 3
+            "",         # 4
+            "Back",     # 5
         ]
 
         menu = utils.create_menu(options, last)
@@ -29,16 +26,12 @@ def show_apache_menu():
         if choice == 0:
             manage_service()
         elif choice == 1:
-            manage_config()
+            manage_sites()
         elif choice == 2:
-            manage_vhosts()
+            manage_config()
         elif choice == 3:
-            manage_pages()
-        elif choice == 4:
             manage_modules()
-        elif choice == 5:
-            manage_logs()
-        elif choice == 7 or choice is None:
+        elif choice == 5 or choice is None:
             return
 
         last = choice
