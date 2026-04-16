@@ -26,16 +26,12 @@ A text-based interface application designed for basic configuration of a Linux s
 - Root permissions
 
 ## Installation
+
+[Download binary](https://github.com/Forbelskym22/Libux/releases/tag/v0.4.1)
 ```
-git clone https://github.com/Forbelskym22/Libux.git
-cd Libux
-sudo ./install.sh
+sudo ./Libuxv0.4.1
 ```
 
-## Usage
-```bash
-sudo ./start.sh
-```
 > Root permissions are required.
 
 ## License
