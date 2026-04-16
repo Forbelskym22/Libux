@@ -259,8 +259,8 @@ def manage_sites():
 
         site_options = []
         for site in available:
-            marker = f"{utils.GREEN}*{utils.RESET} " if site in enabled else "  "
-            site_options.append(f"{marker}{site}")
+            marker = "[on] " if site in enabled else "[off]"
+            site_options.append(f"{marker} {site}")
 
         options = site_options + ["", "Add site", "", "Back"]
 
