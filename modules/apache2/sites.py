@@ -136,6 +136,76 @@ def remove_site(site):
     utils.log(f"{site} removed. Reload Apache2 to apply.", "success")
     utils.pause()
 
+def _generate_self_signed_cert(name):
+    cert_path = f"/etc/ssl/certs/{name}.crt"
+    key_path = f"/etc/ssl/private/{name}.key"
+    utils.log("Generating self-signed certificate...", "info")
+    result = subprocess.run([
+        "sudo", "openssl", "req", "-x509", "-nodes", "-days", "365",
+        "-newkey", "rsa:2048",
+        "-keyout", key_path,
+        "-out", cert_path,
+        "-subj", f"/CN={name}"
+    ], capture_output=True, text=True)
+    if result.returncode == 0:
+        utils.log(f"Certificate: {cert_path}", "success")
+        utils.log(f"Key:         {key_path}", "success")
+        return cert_path, key_path
+    else:
+        utils.log(result.stderr.strip() or "Failed to generate certificate.", "error")
+        return None, None
+
+def _enable_ssl_module():
+    result = subprocess.run(["sudo", "a2enmod", "ssl"], capture_output=True, text=True)
+    return result.returncode == 0
+
+def generate_ssl(site):
+    os.system("clear")
+    utils.print_menu_name(f"SSL - {site}")
+
+    info = _parse_conf(site)
+    name = info["server_name"] if info["server_name"] != "-" else site.replace(".conf", "")
+
+    utils.log("Enabling ssl module...", "info")
+    if not _enable_ssl_module():
+        utils.log("Failed to enable ssl module.", "error")
+        utils.pause()
+        return
+
+    cert_path, key_path = _generate_self_signed_cert(name)
+    if not cert_path:
+        utils.pause()
+        return
+
+    conf_path = f"{SITES_AVAILABLE}/{site}"
+    result = subprocess.run(["sudo", "cat", conf_path], capture_output=True, text=True)
+    conf_content = result.stdout
+
+    if "SSLEngine" in conf_content:
+        utils.log("SSL is already configured in this vhost.", "info")
+        utils.pause()
+        return
+
+    ssl_block = (
+        f"\n    SSLEngine on\n"
+        f"    SSLCertificateFile {cert_path}\n"
+        f"    SSLCertificateKeyFile {key_path}\n"
+    )
+
+    new_conf = conf_content.replace("</VirtualHost>", ssl_block + "</VirtualHost>")
+
+    if "<VirtualHost" in new_conf:
+        import re as _re
+        new_conf = _re.sub(r"<VirtualHost\s+[^:]+:\d+>", f"<VirtualHost *:443>", new_conf, count=1)
+
+    subprocess.run(
+        ["sudo", "bash", "-c", f"cat > {conf_path}"],
+        input=new_conf, text=True, capture_output=True
+    )
+
+    utils.log("SSL configured. Restart Apache2 to apply.", "success")
+    utils.pause()
+
 def add_site():
     os.system("clear")
     utils.print_menu_name("Add Site")
@@ -144,15 +214,11 @@ def add_site():
     if name is None:
         return
 
-    port = utils.ask("Port (Enter for 80)")
-    if port is None:
+    ssl = utils.choose(["HTTP (port 80)", "HTTPS (port 443, self-signed)"], "Protocol")
+    if ssl is None:
         return
-    if not port:
-        port = "80"
-    if not utils.check_port(port):
-        utils.log("Invalid port.", "error")
-        utils.pause()
-        return
+    use_ssl = ssl.startswith("HTTPS")
+    port = "443" if use_ssl else "80"
 
     doc_root = utils.ask(f"DocumentRoot (Enter for /var/www/{name})")
     if doc_root is None:
@@ -163,21 +229,53 @@ def add_site():
     conf_path = f"{SITES_AVAILABLE}/{name}.conf"
     index_path = f"{doc_root}/index.html"
 
-    vhost = (
-        f"<VirtualHost *:{port}>\n"
-        f"    ServerName {name}\n"
-        f"    DocumentRoot {doc_root}\n"
-        f"\n"
-        f"    <Directory {doc_root}>\n"
-        f"        Options Indexes FollowSymLinks\n"
-        f"        AllowOverride All\n"
-        f"        Require all granted\n"
-        f"    </Directory>\n"
-        f"\n"
-        f"    ErrorLog ${{APACHE_LOG_DIR}}/{name}_error.log\n"
-        f"    CustomLog ${{APACHE_LOG_DIR}}/{name}_access.log combined\n"
-        f"</VirtualHost>\n"
-    )
+    cert_path = f"/etc/ssl/certs/{name}.crt"
+    key_path = f"/etc/ssl/private/{name}.key"
+
+    if use_ssl:
+        utils.log("Enabling ssl module...", "info")
+        _enable_ssl_module()
+        cert_path, key_path = _generate_self_signed_cert(name)
+        if not cert_path:
+            utils.pause()
+            return
+
+    if use_ssl:
+        vhost = (
+            f"<VirtualHost *:443>\n"
+            f"    ServerName {name}\n"
+            f"    DocumentRoot {doc_root}\n"
+            f"\n"
+            f"    SSLEngine on\n"
+            f"    SSLCertificateFile {cert_path}\n"
+            f"    SSLCertificateKeyFile {key_path}\n"
+            f"\n"
+            f"    <Directory {doc_root}>\n"
+            f"        Options Indexes FollowSymLinks\n"
+            f"        AllowOverride All\n"
+            f"        Require all granted\n"
+            f"    </Directory>\n"
+            f"\n"
+            f"    ErrorLog ${{APACHE_LOG_DIR}}/{name}_error.log\n"
+            f"    CustomLog ${{APACHE_LOG_DIR}}/{name}_access.log combined\n"
+            f"</VirtualHost>\n"
+        )
+    else:
+        vhost = (
+            f"<VirtualHost *:80>\n"
+            f"    ServerName {name}\n"
+            f"    DocumentRoot {doc_root}\n"
+            f"\n"
+            f"    <Directory {doc_root}>\n"
+            f"        Options Indexes FollowSymLinks\n"
+            f"        AllowOverride All\n"
+            f"        Require all granted\n"
+            f"    </Directory>\n"
+            f"\n"
+            f"    ErrorLog ${{APACHE_LOG_DIR}}/{name}_error.log\n"
+            f"    CustomLog ${{APACHE_LOG_DIR}}/{name}_access.log combined\n"
+            f"</VirtualHost>\n"
+        )
 
     index_html = (
         f"<!DOCTYPE html>\n"
@@ -221,10 +319,11 @@ def site_menu(site):
             "Edit config",  # 1
             "Edit page",    # 2
             toggle_label,   # 3
-            "Logs",         # 4
-            "Remove",       # 5
-            "",             # 6
-            "Back",         # 7
+            "SSL",          # 4
+            "Logs",         # 5
+            "Remove",       # 6
+            "",             # 7
+            "Back",         # 8
         ]
 
         menu = utils.create_menu(options, last)
@@ -239,11 +338,13 @@ def site_menu(site):
         elif choice == 3:
             toggle_site(site)
         elif choice == 4:
-            show_site_logs(site)
+            generate_ssl(site)
         elif choice == 5:
+            show_site_logs(site)
+        elif choice == 6:
             remove_site(site)
             return
-        elif choice == 7 or choice is None:
+        elif choice == 8 or choice is None:
             return
 
         last = choice
