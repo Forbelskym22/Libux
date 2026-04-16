@@ -196,7 +196,7 @@ def manage_config():
 
         options = [
             "Show",         # 0
-            "Config test",  # 1
+            "Test config",  # 1
             "Listen ports", # 2
             "ServerName",   # 3
             "ServerAdmin",  # 4

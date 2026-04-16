@@ -315,13 +315,13 @@ def site_menu(site):
         toggle_label = "Disable" if is_enabled else "Enable"
 
         options = [
-            "Show",         # 0
-            "Edit config",  # 1
-            "Edit page",    # 2
-            toggle_label,   # 3
-            "SSL",          # 4
-            "Logs",         # 5
-            "Remove",       # 6
+            "Show",           # 0
+            "Edit vhost",     # 1
+            "Edit page",      # 2
+            toggle_label,     # 3
+            "Generate SSL",   # 4
+            "Logs",           # 5
+            "Remove",         # 6
             "",             # 7
             "Back",         # 8
         ]

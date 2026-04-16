@@ -80,9 +80,9 @@ def manage_modules():
         utils.print_menu_name("Apache2 Modules")
 
         options = [
-            "Show",     # 0
-            "Enable",   # 1
-            "Disable",  # 2
+            "Show all",  # 0
+            "Enable",    # 1
+            "Disable",   # 2
             "",         # 3
             "Back",     # 4
         ]
