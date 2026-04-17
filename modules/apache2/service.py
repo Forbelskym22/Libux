@@ -1,7 +1,7 @@
 import os
 import subprocess
 from modules import utils
-from .shared import APACHE_SERVICE
+from .shared import APACHE_SERVICE, APACHE_CONF
 
 def is_installed():
     result = subprocess.run(["dpkg", "-l", "apache2"], capture_output=True)
@@ -89,6 +89,18 @@ def reload_service():
         utils.log("Cancelled.", "info")
     utils.pause()
 
+def config_test():
+    os.system("clear")
+    utils.print_menu_name("Test Config")
+    result = subprocess.run(["sudo", "apache2ctl", "configtest"], capture_output=True, text=True)
+    output = (result.stdout + result.stderr).strip()
+    if result.returncode == 0:
+        utils.log("Syntax OK.", "success")
+    else:
+        utils.log("Config error:", "error")
+        print(f"\n{utils.GRAY}{output}{utils.RESET}\n")
+    utils.pause()
+
 def manage_service():
     last = 0
     while True:
@@ -96,13 +108,14 @@ def manage_service():
         utils.print_menu_name("Apache2 Service")
 
         options = [
-            "Status",   # 0
-            "Start",    # 1
-            "Stop",     # 2
-            "Restart",  # 3
-            "Reload",   # 4
-            "",         # 5
-            "Back",     # 6
+            "Status",       # 0
+            "Start",        # 1
+            "Stop",         # 2
+            "Restart",      # 3
+            "Reload",       # 4
+            "Test config",  # 5
+            "",             # 6
+            "Back",         # 7
         ]
 
         menu = utils.create_menu(options, last)
@@ -118,7 +131,9 @@ def manage_service():
             restart_service()
         elif choice == 4:
             reload_service()
-        elif choice == 6 or choice is None:
+        elif choice == 5:
+            config_test()
+        elif choice == 7 or choice is None:
             return
 
         last = choice

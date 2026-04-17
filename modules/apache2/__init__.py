@@ -1,7 +1,6 @@
 import os
 from modules import utils
 from .service import manage_service, is_installed, install_apache
-from .config import manage_config
 from .sites import manage_sites
 from .modules import manage_modules
 
@@ -14,10 +13,9 @@ def show_apache_menu():
         options = [
             "Service",  # 0
             "Sites",    # 1
-            "Config",   # 2
-            "Modules",  # 3
-            "",         # 4
-            "Back",     # 5
+            "Modules",  # 2
+            "",         # 3
+            "Back",     # 4
         ]
 
         menu = utils.create_menu(options, last)
@@ -28,10 +26,8 @@ def show_apache_menu():
         elif choice == 1:
             manage_sites()
         elif choice == 2:
-            manage_config()
-        elif choice == 3:
             manage_modules()
-        elif choice == 5 or choice is None:
+        elif choice == 4 or choice is None:
             return
 
         last = choice
