@@ -711,7 +711,7 @@ def site_menu(site):
             "Edit page",            # 2
             toggle_label,           # 3
             "Generate SSL",         # 4
-            "HTTP → HTTPS redirect", # 5
+            "HTTP -> HTTPS redirect", # 5
             listing_label,          # 6
             "Auth",                 # 7
             "Logs",                 # 8
@@ -739,9 +739,6 @@ def site_menu(site):
             toggle_directory_listing(site)
         elif choice == 7:
             manage_auth(site)
-        elif choice == 6:
-            show_site_logs(site)
-        elif choice == 7:
         elif choice == 8:
             show_site_logs(site)
         elif choice == 9:
