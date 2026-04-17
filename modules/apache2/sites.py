@@ -83,6 +83,7 @@ def _get_interface_ips():
 def _pick_listen_ip():
     ips = _get_interface_ips()
     options = ["* (all interfaces)"] + [f"{ip}  ({iface})" for ip, iface in ips]
+    utils.log("To add or change IP addresses, use the Netwerk section.", "info")
     choice = utils.choose(options, "Select listen IP")
     if choice is None:
         return None
