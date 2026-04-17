@@ -91,6 +91,129 @@ def _pick_listen_ip():
         return "*"
     return choice.split()[0]
 
+def _get_aliases(site):
+    content = _read_conf(site)
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.lower().startswith("serveralias"):
+            return stripped.split()[1:]
+    return []
+
+def manage_aliases(site):
+    while True:
+        os.system("clear")
+        utils.print_menu_name(f"ServerAlias - {site}")
+
+        aliases = _get_aliases(site)
+        if aliases:
+            for a in aliases:
+                print(f"  {utils.YELLOW}{a}{utils.RESET}")
+        else:
+            utils.log("No aliases configured.", "info")
+        print()
+
+        options = ["Add alias", "Remove alias", "", "Back"]
+        menu = utils.create_menu(options)
+        choice = utils.show_menu(menu)
+
+        if choice == 0:
+            alias = utils.ask_required("Alias (e.g. www.example.com)")
+            if alias is None:
+                continue
+            if alias in aliases:
+                utils.log("Alias already exists.", "error")
+                utils.pause()
+                continue
+            aliases.append(alias)
+            content = _read_conf(site)
+            if "ServerAlias" in content:
+                new_content = _set_directive(content, "ServerAlias", " ".join(aliases))
+            else:
+                new_content = _set_directive(content, "ServerName",
+                    _get_aliases(site) and content or content)
+                new_content = re.sub(
+                    r"(ServerName\s+\S+)",
+                    rf"\1\n    ServerAlias {alias}",
+                    new_content, count=1, flags=re.IGNORECASE
+                )
+            _write_conf(site, new_content)
+            utils.log(f"Alias {alias} added. Reload Apache2 to apply.", "success")
+            utils.pause()
+
+        elif choice == 1:
+            if not aliases:
+                utils.log("No aliases to remove.", "error")
+                utils.pause()
+                continue
+            alias = utils.choose(aliases, "Select alias to remove")
+            if alias is None:
+                continue
+            aliases.remove(alias)
+            content = _read_conf(site)
+            if aliases:
+                new_content = _set_directive(content, "ServerAlias", " ".join(aliases))
+            else:
+                new_content = re.sub(
+                    r"\n?\s*ServerAlias\s+.+", "", content, flags=re.IGNORECASE
+                )
+            _write_conf(site, new_content)
+            utils.log(f"Alias {alias} removed. Reload Apache2 to apply.", "success")
+            utils.pause()
+
+        elif choice == 3 or choice is None:
+            break
+
+def _directory_listing_enabled(site):
+    content = _read_conf(site)
+    m = re.search(r"Options\s+([^\n]+)", content, re.IGNORECASE)
+    if m:
+        return "Indexes" in m.group(1)
+    return False
+
+def toggle_directory_listing(site):
+    enabled = _directory_listing_enabled(site)
+    content = _read_conf(site)
+    if enabled:
+        new_content = re.sub(
+            r"(Options\s+[^\n]*)Indexes\s*", r"\1", content, flags=re.IGNORECASE
+        )
+        _write_conf(site, new_content)
+        utils.log("Directory listing disabled. Reload Apache2 to apply.", "success")
+    else:
+        new_content = re.sub(
+            r"(Options\s+)", r"\1Indexes ", content, count=1, flags=re.IGNORECASE
+        )
+        _write_conf(site, new_content)
+        utils.log("Directory listing enabled. Reload Apache2 to apply.", "success")
+    utils.pause()
+
+def add_http_redirect(site):
+    info = _parse_conf(site)
+    server_name = info["server_name"]
+    if server_name == "-":
+        utils.log("ServerName not set, cannot create redirect.", "error")
+        utils.pause()
+        return
+
+    redirect_conf = f"{SITES_AVAILABLE}/{site.replace('.conf', '')}-redirect.conf"
+    content = (
+        f"<VirtualHost *:80>\n"
+        f"    ServerName {server_name}\n"
+        f"    Redirect permanent / https://{server_name}/\n"
+        f"</VirtualHost>\n"
+    )
+    result = subprocess.run(
+        ["sudo", "bash", "-c", f"cat > {redirect_conf}"],
+        input=content, text=True, capture_output=True
+    )
+    if result.returncode == 0:
+        redirect_site = f"{site.replace('.conf', '')}-redirect.conf"
+        subprocess.run(["sudo", "a2ensite", redirect_site], capture_output=True)
+        utils.log(f"HTTP → HTTPS redirect created and enabled. Reload Apache2 to apply.", "success")
+    else:
+        utils.log("Failed to create redirect.", "error")
+    utils.pause()
+
 def edit_site_config(site):
     last = 0
     while True:
@@ -98,9 +221,12 @@ def edit_site_config(site):
         utils.print_menu_name(f"Config - {site}")
 
         info = _parse_conf(site)
+        aliases = _get_aliases(site)
+        alias_str = ", ".join(aliases) if aliases else "none"
         print(f"  {utils.WHITE}{'Listen IP':<16}{utils.YELLOW}{info['ip']}{utils.RESET}")
         print(f"  {utils.WHITE}{'Port':<16}{utils.PURPLE}{info['port']}{utils.RESET}")
         print(f"  {utils.WHITE}{'ServerName':<16}{utils.YELLOW}{info['server_name']}{utils.RESET}")
+        print(f"  {utils.WHITE}{'ServerAlias':<16}{utils.GRAY}{alias_str}{utils.RESET}")
         print(f"  {utils.WHITE}{'DocumentRoot':<16}{utils.GRAY}{info['doc_root']}{utils.RESET}")
         print()
 
@@ -108,11 +234,12 @@ def edit_site_config(site):
             "Listen IP",        # 0
             "Port",             # 1
             "ServerName",       # 2
-            "DocumentRoot",     # 3
-            "",                 # 4
-            "Advanced (nano)",  # 5
-            "",                 # 6
-            "Back",             # 7
+            "ServerAlias",      # 3
+            "DocumentRoot",     # 4
+            "",                 # 5
+            "Advanced (nano)",  # 6
+            "",                 # 7
+            "Back",             # 8
         ]
 
         menu = utils.create_menu(options, last)
@@ -150,6 +277,9 @@ def edit_site_config(site):
             utils.pause()
 
         elif choice == 3:
+            manage_aliases(site)
+
+        elif choice == 4:
             new_root = utils.ask_required("New DocumentRoot")
             if new_root is None:
                 continue
@@ -160,10 +290,10 @@ def edit_site_config(site):
             utils.log(f"DocumentRoot set to {new_root}. Reload Apache2 to apply.", "success")
             utils.pause()
 
-        elif choice == 5:
+        elif choice == 6:
             subprocess.run(["sudo", "nano", f"{SITES_AVAILABLE}/{site}"])
 
-        elif choice == 7 or choice is None:
+        elif choice == 8 or choice is None:
             return
 
         last = choice
@@ -337,7 +467,12 @@ def generate_ssl(site):
     )
 
     utils.log("SSL configured. Restart Apache2 to apply.", "success")
-    utils.pause()
+
+    confirm = utils.choose(["yes", "no"], "Add HTTP → HTTPS redirect for port 80?")
+    if confirm == "yes":
+        add_http_redirect(site)
+    else:
+        utils.pause()
 
 def add_site():
     os.system("clear")
@@ -568,18 +703,21 @@ def site_menu(site):
 
         is_enabled = site in list_enabled()
         toggle_label = "Disable" if is_enabled else "Enable"
+        listing_label = "Disable directory listing" if _directory_listing_enabled(site) else "Enable directory listing"
 
         options = [
-            "Show",           # 0
-            "Config",         # 1
-            "Edit page",      # 2
-            toggle_label,     # 3
-            "Generate SSL",   # 4
-            "Auth",           # 5
-            "Logs",           # 6
-            "Remove",         # 7
-            "",               # 8
-            "Back",           # 9
+            "Show",                 # 0
+            "Config",               # 1
+            "Edit page",            # 2
+            toggle_label,           # 3
+            "Generate SSL",         # 4
+            "HTTP → HTTPS redirect", # 5
+            listing_label,          # 6
+            "Auth",                 # 7
+            "Logs",                 # 8
+            "Remove",               # 9
+            "",                     # 10
+            "Back",                 # 11
         ]
 
         menu = utils.create_menu(options, last)
@@ -596,13 +734,20 @@ def site_menu(site):
         elif choice == 4:
             generate_ssl(site)
         elif choice == 5:
+            add_http_redirect(site)
+        elif choice == 6:
+            toggle_directory_listing(site)
+        elif choice == 7:
             manage_auth(site)
         elif choice == 6:
             show_site_logs(site)
         elif choice == 7:
+        elif choice == 8:
+            show_site_logs(site)
+        elif choice == 9:
             remove_site(site)
             return
-        elif choice == 9 or choice is None:
+        elif choice == 11 or choice is None:
             return
 
         last = choice
