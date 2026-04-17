@@ -66,6 +66,30 @@ def _set_directive(content, key, value):
         new_content = new_content.replace("</VirtualHost>", f"    {key} {value}\n</VirtualHost>", 1)
     return new_content
 
+def _get_interface_ips():
+    result = subprocess.run(
+        ["ip", "-o", "addr", "show"],
+        capture_output=True, text=True
+    )
+    ips = []
+    for line in result.stdout.splitlines():
+        parts = line.split()
+        if len(parts) >= 4 and parts[2] == "inet":
+            ip = parts[3].split("/")[0]
+            iface = parts[1]
+            ips.append((ip, iface))
+    return ips
+
+def _pick_listen_ip():
+    ips = _get_interface_ips()
+    options = ["* (all interfaces)"] + [f"{ip}  ({iface})" for ip, iface in ips]
+    choice = utils.choose(options, "Select listen IP")
+    if choice is None:
+        return None
+    if choice.startswith("*"):
+        return "*"
+    return choice.split()[0]
+
 def edit_site_config(site):
     last = 0
     while True:
@@ -94,13 +118,8 @@ def edit_site_config(site):
         choice = utils.show_menu(menu)
 
         if choice == 0:
-            utils.log("Use * to listen on all interfaces, or enter a specific IP.", "info")
-            new_ip = utils.ask_required("Listen IP (* or e.g. 192.168.1.100)")
+            new_ip = _pick_listen_ip()
             if new_ip is None:
-                continue
-            if new_ip != "*" and not utils.check_ip(new_ip):
-                utils.log("Invalid IP address.", "error")
-                utils.pause()
                 continue
             content = _read_conf(site)
             _write_conf(site, _set_vhost_ip(content, new_ip))
