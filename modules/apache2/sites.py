@@ -308,17 +308,37 @@ def _show_log(log_path, title):
         print(result.stdout)
     utils.pause()
 
+def _yes(val):
+    return f"{utils.GREEN}yes{utils.RESET}" if val else f"{utils.GRAY}no{utils.RESET}"
+
 def show_site_details(site):
     os.system("clear")
     utils.print_menu_name(f"Site - {site}")
     info = _parse_conf(site)
     enabled = list_enabled()
+
+    aliases = _get_aliases(site)
+    ssl = "SSLEngine on" in _read_conf(site)
+    redirect_conf = f"{site.replace('.conf', '')}-redirect.conf"
+    redirect = redirect_conf in list_available()
+    auth = _auth_enabled(site)
+    listing = _directory_listing_enabled(site)
+
     status_str = f"{utils.GREEN}enabled{utils.RESET}" if site in enabled else f"{utils.GRAY}disabled{utils.RESET}"
-    print(f"  {utils.WHITE}{'Status':<16}{status_str}")
-    print(f"  {utils.WHITE}{'Listen IP':<16}{utils.YELLOW}{info['ip']}{utils.RESET}")
-    print(f"  {utils.WHITE}{'Port':<16}{utils.PURPLE}{info['port']}{utils.RESET}")
-    print(f"  {utils.WHITE}{'ServerName':<16}{utils.YELLOW}{info['server_name']}{utils.RESET}")
-    print(f"  {utils.WHITE}{'DocumentRoot':<16}{utils.GRAY}{info['doc_root']}{utils.RESET}")
+
+    print(f"  {utils.WHITE}{'Status':<20}{status_str}")
+    print()
+    print(f"  {utils.WHITE}{'Listen IP':<20}{utils.YELLOW}{info['ip']}{utils.RESET}")
+    print(f"  {utils.WHITE}{'Port':<20}{utils.PURPLE}{info['port']}{utils.RESET}")
+    print(f"  {utils.WHITE}{'ServerName':<20}{utils.YELLOW}{info['server_name']}{utils.RESET}")
+    if aliases:
+        print(f"  {utils.WHITE}{'ServerAlias':<20}{utils.GRAY}{', '.join(aliases)}{utils.RESET}")
+    print(f"  {utils.WHITE}{'DocumentRoot':<20}{utils.GRAY}{info['doc_root']}{utils.RESET}")
+    print()
+    print(f"  {utils.WHITE}{'SSL':<20}{_yes(ssl)}")
+    print(f"  {utils.WHITE}{'HTTP->HTTPS redirect':<20}{_yes(redirect)}")
+    print(f"  {utils.WHITE}{'Basic Auth':<20}{_yes(auth)}")
+    print(f"  {utils.WHITE}{'Directory listing':<20}{_yes(listing)}")
     utils.pause()
 
 def toggle_site(site):
