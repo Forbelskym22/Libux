@@ -396,6 +396,128 @@ def add_site():
     utils.log("Opening index.html in nano...", "info")
     subprocess.run(["sudo", "nano", index_path])
 
+def _htpasswd_path(site):
+    return f"/etc/apache2/.htpasswd_{site.replace('.conf', '')}"
+
+def _auth_enabled(site):
+    content = _read_conf(site)
+    return "AuthType Basic" in content
+
+def _enable_auth(site, realm):
+    htpasswd = _htpasswd_path(site)
+    auth_block = (
+        f"\n    <Location />\n"
+        f"        AuthType Basic\n"
+        f"        AuthName \"{realm}\"\n"
+        f"        AuthUserFile {htpasswd}\n"
+        f"        Require valid-user\n"
+        f"    </Location>\n"
+    )
+    content = _read_conf(site)
+    new_content = content.replace("</VirtualHost>", auth_block + "</VirtualHost>")
+    _write_conf(site, new_content)
+
+def _disable_auth(site):
+    content = _read_conf(site)
+    new_content = re.sub(
+        r"\s*<Location\s*/\s*>.*?</Location>",
+        "", content, flags=re.DOTALL
+    )
+    _write_conf(site, new_content)
+
+def manage_auth(site):
+    last = 0
+    while True:
+        os.system("clear")
+        utils.print_menu_name(f"Auth - {site}")
+
+        enabled = _auth_enabled(site)
+        status_str = f"{utils.GREEN}enabled{utils.RESET}" if enabled else f"{utils.GRAY}disabled{utils.RESET}"
+        print(f"  {utils.WHITE}Basic Auth: {status_str}\n{utils.RESET}")
+
+        toggle_auth = "Disable auth" if enabled else "Enable auth"
+
+        options = [
+            toggle_auth,        # 0
+            "Add user",         # 1
+            "Remove user",      # 2
+            "Show users",       # 3
+            "",                 # 4
+            "Back",             # 5
+        ]
+
+        menu = utils.create_menu(options, last)
+        choice = utils.show_menu(menu)
+
+        if choice == 0:
+            if enabled:
+                confirm = utils.choose(["yes", "no"], "Disable auth and remove htpasswd?", "error")
+                if confirm == "yes":
+                    _disable_auth(site)
+                    subprocess.run(["sudo", "rm", "-f", _htpasswd_path(site)], capture_output=True)
+                    utils.log("Auth disabled. Reload Apache2 to apply.", "success")
+                    utils.pause()
+            else:
+                subprocess.run(["sudo", "a2enmod", "auth_basic"], capture_output=True)
+                realm = utils.ask("Auth realm (Enter for Restricted Area)")
+                if realm is None:
+                    continue
+                if not realm:
+                    realm = "Restricted Area"
+                _enable_auth(site, realm)
+                utils.log("Auth enabled. Add users and reload Apache2 to apply.", "success")
+                utils.pause()
+
+        elif choice == 1:
+            username = utils.ask_required("Username")
+            if username is None:
+                continue
+            htpasswd = _htpasswd_path(site)
+            flag = "-c" if not os.path.exists(htpasswd) else ""
+            cmd = ["sudo", "htpasswd"]
+            if flag:
+                cmd.append(flag)
+            cmd += [htpasswd, username]
+            result = subprocess.run(cmd)
+            if result.returncode == 0:
+                utils.log(f"User {username} added.", "success")
+            else:
+                utils.log("Failed to add user.", "error")
+            utils.pause()
+
+        elif choice == 2:
+            htpasswd = _htpasswd_path(site)
+            result = subprocess.run(["sudo", "cat", htpasswd], capture_output=True, text=True)
+            if result.returncode != 0 or not result.stdout.strip():
+                utils.log("No users found.", "info")
+                utils.pause()
+                continue
+            users = [line.split(":")[0] for line in result.stdout.strip().splitlines() if ":" in line]
+            user = utils.choose(users, "Select user to remove")
+            if user is None:
+                continue
+            subprocess.run(["sudo", "htpasswd", "-D", htpasswd, user], capture_output=True)
+            utils.log(f"User {user} removed.", "success")
+            utils.pause()
+
+        elif choice == 3:
+            os.system("clear")
+            utils.print_menu_name(f"Users - {site}")
+            htpasswd = _htpasswd_path(site)
+            result = subprocess.run(["sudo", "cat", htpasswd], capture_output=True, text=True)
+            if result.returncode != 0 or not result.stdout.strip():
+                utils.log("No users found.", "info")
+            else:
+                for line in result.stdout.strip().splitlines():
+                    user = line.split(":")[0]
+                    print(f"  {utils.YELLOW}{user}{utils.RESET}")
+            utils.pause()
+
+        elif choice == 5 or choice is None:
+            return
+
+        last = choice
+
 def site_menu(site):
     enabled = list_enabled()
     last = 0
@@ -412,10 +534,11 @@ def site_menu(site):
             "Edit page",      # 2
             toggle_label,     # 3
             "Generate SSL",   # 4
-            "Logs",           # 5
-            "Remove",         # 6
-            "",               # 7
-            "Back",           # 8
+            "Auth",           # 5
+            "Logs",           # 6
+            "Remove",         # 7
+            "",               # 8
+            "Back",           # 9
         ]
 
         menu = utils.create_menu(options, last)
@@ -432,11 +555,13 @@ def site_menu(site):
         elif choice == 4:
             generate_ssl(site)
         elif choice == 5:
-            show_site_logs(site)
+            manage_auth(site)
         elif choice == 6:
+            show_site_logs(site)
+        elif choice == 7:
             remove_site(site)
             return
-        elif choice == 8 or choice is None:
+        elif choice == 9 or choice is None:
             return
 
         last = choice
