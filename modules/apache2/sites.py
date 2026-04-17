@@ -459,7 +459,7 @@ def manage_auth(site):
                     utils.pause()
             else:
                 subprocess.run(["sudo", "a2enmod", "auth_basic"], capture_output=True)
-                realm = utils.ask("Auth realm (Enter for Restricted Area)")
+                realm = utils.ask("Message of the day (Enter for Restricted Area)")
                 if realm is None:
                     continue
                 if not realm:
