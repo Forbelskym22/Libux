@@ -19,13 +19,14 @@ def list_enabled():
         return []
 
 def _parse_conf(site_conf):
-    info = {"port": "-", "server_name": "-", "doc_root": "-"}
+    info = {"ip": "*", "port": "-", "server_name": "-", "doc_root": "-"}
     result = subprocess.run(["sudo", "cat", f"{SITES_AVAILABLE}/{site_conf}"], capture_output=True, text=True)
     for line in result.stdout.splitlines():
         stripped = line.strip()
-        m = re.match(r"<VirtualHost\s+[^:]+:(\d+)>", stripped, re.IGNORECASE)
+        m = re.match(r"<VirtualHost\s+(.+):(\d+)>", stripped, re.IGNORECASE)
         if m:
-            info["port"] = m.group(1)
+            info["ip"] = m.group(1)
+            info["port"] = m.group(2)
         if stripped.lower().startswith("servername"):
             parts = stripped.split()
             if len(parts) >= 2:
@@ -54,6 +55,9 @@ def _write_conf(site_conf, content):
 def _set_vhost_port(content, port):
     return re.sub(r"(<VirtualHost\s+[^:]+:)\d+(>)", rf"\g<1>{port}\2", content, count=1, flags=re.IGNORECASE)
 
+def _set_vhost_ip(content, ip):
+    return re.sub(r"(<VirtualHost\s+)[^:]+(:)", rf"\g<1>{ip}\2", content, count=1, flags=re.IGNORECASE)
+
 def _set_directive(content, key, value):
     pattern = rf"^(\s*){re.escape(key)}\s+.+$"
     replacement = rf"\g<1>{key} {value}"
@@ -69,25 +73,41 @@ def edit_site_config(site):
         utils.print_menu_name(f"Config - {site}")
 
         info = _parse_conf(site)
+        print(f"  {utils.WHITE}{'Listen IP':<16}{utils.YELLOW}{info['ip']}{utils.RESET}")
         print(f"  {utils.WHITE}{'Port':<16}{utils.PURPLE}{info['port']}{utils.RESET}")
         print(f"  {utils.WHITE}{'ServerName':<16}{utils.YELLOW}{info['server_name']}{utils.RESET}")
         print(f"  {utils.WHITE}{'DocumentRoot':<16}{utils.GRAY}{info['doc_root']}{utils.RESET}")
         print()
 
         options = [
-            "Port",             # 0
-            "ServerName",       # 1
-            "DocumentRoot",     # 2
-            "",                 # 3
-            "Advanced (nano)",  # 4
-            "",                 # 5
-            "Back",             # 6
+            "Listen IP",        # 0
+            "Port",             # 1
+            "ServerName",       # 2
+            "DocumentRoot",     # 3
+            "",                 # 4
+            "Advanced (nano)",  # 5
+            "",                 # 6
+            "Back",             # 7
         ]
 
         menu = utils.create_menu(options, last)
         choice = utils.show_menu(menu)
 
         if choice == 0:
+            utils.log("Use * to listen on all interfaces, or enter a specific IP.", "info")
+            new_ip = utils.ask_required("Listen IP (* or e.g. 192.168.1.100)")
+            if new_ip is None:
+                continue
+            if new_ip != "*" and not utils.check_ip(new_ip):
+                utils.log("Invalid IP address.", "error")
+                utils.pause()
+                continue
+            content = _read_conf(site)
+            _write_conf(site, _set_vhost_ip(content, new_ip))
+            utils.log(f"Listen IP set to {new_ip}. Reload Apache2 to apply.", "success")
+            utils.pause()
+
+        elif choice == 1:
             new_port = utils.ask_required("New port")
             if new_port is None:
                 continue
@@ -100,7 +120,7 @@ def edit_site_config(site):
             utils.log(f"Port set to {new_port}. Reload Apache2 to apply.", "success")
             utils.pause()
 
-        elif choice == 1:
+        elif choice == 2:
             new_name = utils.ask_required("New ServerName")
             if new_name is None:
                 continue
@@ -109,7 +129,7 @@ def edit_site_config(site):
             utils.log(f"ServerName set to {new_name}. Reload Apache2 to apply.", "success")
             utils.pause()
 
-        elif choice == 2:
+        elif choice == 3:
             new_root = utils.ask_required("New DocumentRoot")
             if new_root is None:
                 continue
@@ -120,10 +140,10 @@ def edit_site_config(site):
             utils.log(f"DocumentRoot set to {new_root}. Reload Apache2 to apply.", "success")
             utils.pause()
 
-        elif choice == 4:
+        elif choice == 5:
             subprocess.run(["sudo", "nano", f"{SITES_AVAILABLE}/{site}"])
 
-        elif choice == 6 or choice is None:
+        elif choice == 7 or choice is None:
             return
 
         last = choice
@@ -145,6 +165,7 @@ def show_site_details(site):
     enabled = list_enabled()
     status_str = f"{utils.GREEN}enabled{utils.RESET}" if site in enabled else f"{utils.GRAY}disabled{utils.RESET}"
     print(f"  {utils.WHITE}{'Status':<16}{status_str}")
+    print(f"  {utils.WHITE}{'Listen IP':<16}{utils.YELLOW}{info['ip']}{utils.RESET}")
     print(f"  {utils.WHITE}{'Port':<16}{utils.PURPLE}{info['port']}{utils.RESET}")
     print(f"  {utils.WHITE}{'ServerName':<16}{utils.YELLOW}{info['server_name']}{utils.RESET}")
     print(f"  {utils.WHITE}{'DocumentRoot':<16}{utils.GRAY}{info['doc_root']}{utils.RESET}")
