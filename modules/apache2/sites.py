@@ -309,7 +309,13 @@ def _show_log(log_path, title):
     utils.pause()
 
 def _yes(val):
-    return f"{utils.GREEN}yes{utils.RESET}" if val else f"{utils.GRAY}no{utils.RESET}"
+    return f"{utils.GREEN}on {utils.RESET}" if val else f"{utils.GRAY}off{utils.RESET}"
+
+def _row(label, value, col=22):
+    return f"  {utils.GRAY}{label:<{col}}{utils.RESET}{value}"
+
+def _divider():
+    print(f"  {utils.GRAY}{'─' * 36}{utils.RESET}")
 
 def show_site_details(site):
     os.system("clear")
@@ -324,21 +330,24 @@ def show_site_details(site):
     auth = _auth_enabled(site)
     listing = _directory_listing_enabled(site)
 
-    status_str = f"{utils.GREEN}enabled{utils.RESET}" if site in enabled else f"{utils.GRAY}disabled{utils.RESET}"
+    status_str = f"{utils.GREEN}enabled{utils.RESET}" if site in enabled else f"{utils.RED}disabled{utils.RESET}"
+    name_str = f"{utils.YELLOW}{info['server_name']}{utils.RESET}" if info['server_name'] != "-" else f"{utils.GRAY}not set{utils.RESET}"
+    alias_str = f"{utils.GRAY}{', '.join(aliases)}{utils.RESET}" if aliases else f"{utils.GRAY}none{utils.RESET}"
 
-    print(f"  {utils.WHITE}{'Status':<20}{status_str}")
+    print(_row("Status", status_str))
     print()
-    print(f"  {utils.WHITE}{'Listen IP':<20}{utils.YELLOW}{info['ip']}{utils.RESET}")
-    print(f"  {utils.WHITE}{'Port':<20}{utils.PURPLE}{info['port']}{utils.RESET}")
-    print(f"  {utils.WHITE}{'ServerName':<20}{utils.YELLOW}{info['server_name']}{utils.RESET}")
-    if aliases:
-        print(f"  {utils.WHITE}{'ServerAlias':<20}{utils.GRAY}{', '.join(aliases)}{utils.RESET}")
-    print(f"  {utils.WHITE}{'DocumentRoot':<20}{utils.GRAY}{info['doc_root']}{utils.RESET}")
-    print()
-    print(f"  {utils.WHITE}{'SSL':<20}{_yes(ssl)}")
-    print(f"  {utils.WHITE}{'HTTP->HTTPS redirect':<20}{_yes(redirect)}")
-    print(f"  {utils.WHITE}{'Basic Auth':<20}{_yes(auth)}")
-    print(f"  {utils.WHITE}{'Directory listing':<20}{_yes(listing)}")
+    _divider()
+    print(_row("Listen IP", f"{utils.YELLOW}{info['ip']}{utils.RESET}"))
+    print(_row("Port", f"{utils.PURPLE}{info['port']}{utils.RESET}"))
+    print(_row("ServerName", name_str))
+    print(_row("ServerAlias", alias_str))
+    print(_row("DocumentRoot", f"{utils.WHITE}{info['doc_root']}{utils.RESET}"))
+    _divider()
+    print(_row("SSL", _yes(ssl)))
+    print(_row("HTTP->HTTPS redirect", _yes(redirect)))
+    print(_row("Basic Auth", _yes(auth)))
+    print(_row("Directory listing", _yes(listing)))
+    _divider()
     utils.pause()
 
 def toggle_site(site):
