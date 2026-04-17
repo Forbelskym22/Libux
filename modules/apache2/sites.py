@@ -36,6 +36,98 @@ def _parse_conf(site_conf):
                 info["doc_root"] = parts[1]
     return info
 
+def _read_conf(site_conf):
+    result = subprocess.run(["sudo", "cat", f"{SITES_AVAILABLE}/{site_conf}"], capture_output=True, text=True)
+    return result.stdout
+
+def _write_conf(site_conf, content):
+    try:
+        subprocess.run(
+            ["sudo", "bash", "-c", f"cat > {SITES_AVAILABLE}/{site_conf}"],
+            input=content, text=True, capture_output=True
+        )
+        return True
+    except Exception as e:
+        utils.log(f"Failed to write config: {e}", "error")
+        return False
+
+def _set_vhost_port(content, port):
+    return re.sub(r"(<VirtualHost\s+[^:]+:)\d+(>)", rf"\g<1>{port}\2", content, count=1, flags=re.IGNORECASE)
+
+def _set_directive(content, key, value):
+    pattern = rf"^(\s*){re.escape(key)}\s+.+$"
+    replacement = rf"\g<1>{key} {value}"
+    new_content, count = re.subn(pattern, replacement, content, flags=re.IGNORECASE | re.MULTILINE)
+    if count == 0:
+        new_content = new_content.replace("</VirtualHost>", f"    {key} {value}\n</VirtualHost>", 1)
+    return new_content
+
+def edit_site_config(site):
+    last = 0
+    while True:
+        os.system("clear")
+        utils.print_menu_name(f"Config - {site}")
+
+        info = _parse_conf(site)
+        print(f"  {utils.WHITE}{'Port':<16}{utils.PURPLE}{info['port']}{utils.RESET}")
+        print(f"  {utils.WHITE}{'ServerName':<16}{utils.YELLOW}{info['server_name']}{utils.RESET}")
+        print(f"  {utils.WHITE}{'DocumentRoot':<16}{utils.GRAY}{info['doc_root']}{utils.RESET}")
+        print()
+
+        options = [
+            "Port",             # 0
+            "ServerName",       # 1
+            "DocumentRoot",     # 2
+            "",                 # 3
+            "Advanced (nano)",  # 4
+            "",                 # 5
+            "Back",             # 6
+        ]
+
+        menu = utils.create_menu(options, last)
+        choice = utils.show_menu(menu)
+
+        if choice == 0:
+            new_port = utils.ask_required("New port")
+            if new_port is None:
+                continue
+            if not utils.check_port(new_port):
+                utils.log("Invalid port.", "error")
+                utils.pause()
+                continue
+            content = _read_conf(site)
+            _write_conf(site, _set_vhost_port(content, new_port))
+            utils.log(f"Port set to {new_port}. Reload Apache2 to apply.", "success")
+            utils.pause()
+
+        elif choice == 1:
+            new_name = utils.ask_required("New ServerName")
+            if new_name is None:
+                continue
+            content = _read_conf(site)
+            _write_conf(site, _set_directive(content, "ServerName", new_name))
+            utils.log(f"ServerName set to {new_name}. Reload Apache2 to apply.", "success")
+            utils.pause()
+
+        elif choice == 2:
+            new_root = utils.ask_required("New DocumentRoot")
+            if new_root is None:
+                continue
+            content = _read_conf(site)
+            updated = _set_directive(content, "DocumentRoot", new_root)
+            updated = re.sub(r"<Directory\s+\S+>", f"<Directory {new_root}>", updated, count=1)
+            _write_conf(site, updated)
+            utils.log(f"DocumentRoot set to {new_root}. Reload Apache2 to apply.", "success")
+            utils.pause()
+
+        elif choice == 4:
+            subprocess.run(["sudo", "nano", f"{SITES_AVAILABLE}/{site}"])
+
+        elif choice == 6 or choice is None:
+            return
+
+        last = choice
+
 def _show_log(log_path, title):
     os.system("clear")
     utils.print_menu_name(title)
@@ -316,14 +408,14 @@ def site_menu(site):
 
         options = [
             "Show",           # 0
-            "Edit vhost",     # 1
+            "Config",         # 1
             "Edit page",      # 2
             toggle_label,     # 3
             "Generate SSL",   # 4
             "Logs",           # 5
             "Remove",         # 6
-            "",             # 7
-            "Back",         # 8
+            "",               # 7
+            "Back",           # 8
         ]
 
         menu = utils.create_menu(options, last)
@@ -332,7 +424,7 @@ def site_menu(site):
         if choice == 0:
             show_site_details(site)
         elif choice == 1:
-            edit_conf(site)
+            edit_site_config(site)
         elif choice == 2:
             edit_page(site)
         elif choice == 3:
