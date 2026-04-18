@@ -1,0 +1,8 @@
+APACHE_SERVICE = "apache2"
+APACHE_CONF = "/etc/apache2/apache2.conf"
+PORTS_CONF = "/etc/apache2/ports.conf"
+SITES_AVAILABLE = "/etc/apache2/sites-available"
+SITES_ENABLED = "/etc/apache2/sites-enabled"
+MODS_AVAILABLE = "/etc/apache2/mods-available"
+MODS_ENABLED = "/etc/apache2/mods-enabled"
+LOG_DIR = "/var/log/apache2"
