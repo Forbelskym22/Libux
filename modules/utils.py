@@ -170,14 +170,37 @@ def print_menu_name(title):
 
 def pick_path(start="/", dirs_only=False):
     """
-    Interactive file browser. Returns selected path or None on Ctrl+C.
-    dirs_only=True limits selection to directories.
+    Interactive file/directory picker.
+    First asks whether to type a path or browse via TUI.
+    In TUI: Enter navigates into dirs / selects files.
+            Ctrl+Enter (ctrl-j) selects the highlighted directory.
+    Returns selected path or None on Ctrl+C.
     """
     import os
+
+    # ── Step 1: method ─────────────────────────────────────────────────────────
+    os.system("clear")
+    print_menu_name("Select path")
+    method = choose(["Browse (TUI)", "Type path manually"], "How would you like to select the path?")
+    if method is None:
+        return None
+
+    if method == "Type path manually":
+        print()
+        try:
+            typed = input(f"{WHITE}Path: {RESET}").strip()
+        except KeyboardInterrupt:
+            return None
+        if typed and os.path.exists(typed):
+            return typed
+        log("Path does not exist.", "error")
+        return None
+
+    # ── Step 2: TUI browser ────────────────────────────────────────────────────
     current = start
     while True:
         os.system("clear")
-        print_menu_name(f"Browse - {current}")
+        print_menu_name(f"Browse - {current}  {GRAY}Enter=open  Ctrl+J=select dir{RESET}")
 
         try:
             entries = sorted(os.listdir(current))
@@ -189,14 +212,17 @@ def pick_path(start="/", dirs_only=False):
         dirs  = [e for e in entries if os.path.isdir(os.path.join(current, e))]
         files = [] if dirs_only else [e for e in entries if os.path.isfile(os.path.join(current, e))]
 
-        options = ["[Select this directory]", "[Type path manually]"]
+        options = []
         if current != "/":
             options.append("..")
         options += [f"{d}/" for d in dirs] + files
 
         menu = TerminalMenu(
-            options, cycle_cursor=True, clear_screen=False,
-            menu_cursor_style=MENU_CURSOR_STYLE
+            options,
+            accept_keys=("enter", "ctrl-j"),
+            cycle_cursor=True,
+            clear_screen=False,
+            menu_cursor_style=MENU_CURSOR_STYLE,
         )
         try:
             idx = menu.show()
@@ -207,24 +233,17 @@ def pick_path(start="/", dirs_only=False):
             return None
 
         selected = options[idx]
+        key = menu.chosen_accept_key
 
-        if selected == "[Select this directory]":
-            return current
-        elif selected == "[Type path manually]":
-            print()
-            try:
-                typed = input(f"{WHITE}Path: {RESET}").strip()
-            except KeyboardInterrupt:
-                continue
-            if typed and os.path.exists(typed):
-                return typed
-            log("Path does not exist.", "error")
-        elif selected == "..":
+        if selected == "..":
             current = os.path.dirname(current)
         elif selected.endswith("/"):
-            current = os.path.join(current, selected[:-1])
-        else:
-            if dirs_only:
-                current = os.path.join(current, selected)
+            dirname = selected[:-1]
+            if key == "ctrl-j":
+                # select this directory
+                return os.path.join(current, dirname)
             else:
-                return os.path.join(current, selected)
+                # navigate into it
+                current = os.path.join(current, dirname)
+        else:
+            return os.path.join(current, selected)
