@@ -3,6 +3,20 @@ import subprocess
 from modules import utils
 from .users import get_local_users, get_all_groups
 
+# Groups with GID < 1000 that are still useful for regular users
+USEFUL_SYSTEM_GROUPS = {
+    "sudo", "adm", "www-data", "audio", "video", "plugdev",
+    "netdev", "bluetooth", "docker", "lpadmin", "dialout",
+    "cdrom", "floppy", "tape", "staff",
+}
+
+def get_user_groups():
+    """Returns groups relevant for user management."""
+    return [
+        g for g in get_all_groups()
+        if int(g["gid"]) >= 1000 or g["name"] in USEFUL_SYSTEM_GROUPS
+    ]
+
 # ── List groups ────────────────────────────────────────────────────────────────
 
 def show_groups():
@@ -97,7 +111,7 @@ def manage_membership():
         choice = utils.show_menu(utils.create_menu(["Add to group", "Remove from group", "", "Back"]))
 
         if choice == 0:
-            all_groups = [g["name"] for g in get_all_groups()]
+            all_groups = [g["name"] for g in get_user_groups()]
             groupname = utils.choose(all_groups, "Select group")
             if groupname is None:
                 continue
