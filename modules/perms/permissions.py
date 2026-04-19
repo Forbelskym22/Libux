@@ -94,6 +94,17 @@ def change_group():
 
 # ── Change permissions ─────────────────────────────────────────────────────────
 
+PRESETS = [
+    ("644", "rw-r--r--", "File: owner can read/write, everyone else can read"),
+    ("755", "rwxr-xr-x", "Dir/script: owner full access, everyone can read & enter"),
+    ("600", "rw-------", "Private file: only owner can read/write"),
+    ("700", "rwx------", "Private dir/script: only owner has any access"),
+    ("750", "rwxr-x---", "Dir/script: owner full, group can read & enter, others nothing"),
+    ("640", "rw-r-----", "File: owner read/write, group read, others nothing"),
+    ("777", "rwxrwxrwx", "Everyone full access (not recommended)"),
+    ("(manual)", "",       "Enter octal or symbolic mode manually (e.g. 754, u+x, go-w)"),
+]
+
 def change_permissions():
     os.system("clear")
     utils.print_menu_name("Change permissions")
@@ -103,10 +114,33 @@ def change_permissions():
 
     os.system("clear")
     utils.print_menu_name(f"Change permissions - {path}")
-    print(f"  {utils.GRAY}Octal (e.g. 755, 644) or symbolic (e.g. u+x, go-w){utils.RESET}")
-    mode = utils.ask_required("Mode")
-    if mode is None:
+
+    # show current permissions
+    result = subprocess.run(["stat", "-c", "%A %a", path], capture_output=True, text=True)
+    if result.returncode == 0:
+        symbolic, octal = result.stdout.strip().split()
+        print(f"  {utils.GRAY}Current: {utils.YELLOW}{symbolic}  ({octal}){utils.RESET}\n")
+
+    # preset menu with descriptions
+    labels = [
+        f"{octal:<8} {sym:<12} {utils.GRAY}{desc}{utils.RESET}"
+        if octal != "(manual)" else f"(manual entry)"
+        for octal, sym, desc in PRESETS
+    ]
+    choice = utils.choose(labels, "Select permission preset")
+    if choice is None:
         return
+
+    idx = labels.index(choice)
+    octal, _, _ = PRESETS[idx]
+
+    if octal == "(manual)":
+        print(f"\n  {utils.GRAY}Octal (e.g. 755) or symbolic (e.g. u+x, go-w){utils.RESET}")
+        mode = utils.ask_required("Mode")
+        if mode is None:
+            return
+    else:
+        mode = octal
 
     recursive = utils.choose(["yes", "no"], "Apply recursively?") == "yes"
     cmd = ["sudo", "chmod"] + (["-R"] if recursive else []) + [mode, path]
