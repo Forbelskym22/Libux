@@ -58,6 +58,9 @@ def ask(prompt):
         return input(f"{WHITE}{prompt}{GRAY} (Enter to skip): {RESET}").strip()
     except KeyboardInterrupt:
         return None
+    except UnicodeDecodeError:
+        log("Input encoding error. Use ASCII characters only.", "error")
+        return ask(prompt)
 
 def ask_required(prompt):
     while True:
@@ -69,12 +72,16 @@ def ask_required(prompt):
             return value
         except KeyboardInterrupt:
             return None
+        except UnicodeDecodeError:
+            log("Input encoding error. Use ASCII characters only.", "error")
 
 
 def pause():
     try:
         input(f"\n{GRAY}Press Enter to continue...{RESET}")
     except KeyboardInterrupt:
+        pass
+    except UnicodeDecodeError:
         pass
 
 def ask_ip(msg="IP/subnet"):
