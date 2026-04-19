@@ -140,12 +140,20 @@ def add_route():
     if result.returncode != 0:
         err = result.stderr.strip()
         if "invalid gateway" in err.lower() or "nexthop" in err.lower():
-            utils.log(f"Gateway {gw} is not directly reachable.", "error")
-            utils.log("The gateway must be on a subnet assigned to one of your interfaces.", "info")
+            utils.log("Gateway is not directly reachable via a local interface.", "error")
+            if utils.choose(["yes", "no"], "Force add with onlink flag?") == "yes":
+                result2 = subprocess.run(cmd + ["onlink"], capture_output=True, text=True)
+                if result2.returncode != 0:
+                    utils.log(result2.stderr.strip() or "Failed to add route.", "error")
+                    utils.pause()
+                    return
+            else:
+                utils.pause()
+                return
         else:
             utils.log(err or "Failed to add route.", "error")
-        utils.pause()
-        return
+            utils.pause()
+            return
     utils.log(f"Route {network} via {gw} added.", "success")
 
     if utils.choose(["yes", "no"], "Make persistent in /etc/network/interfaces?") == "yes":
