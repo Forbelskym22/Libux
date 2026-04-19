@@ -22,7 +22,7 @@ def get_user_groups():
 def show_groups():
     os.system("clear")
     utils.print_menu_name("Groups")
-    groups = get_all_groups()
+    groups = get_user_groups()
     if not groups:
         utils.log("No groups found.", "info")
         utils.pause()
@@ -64,7 +64,7 @@ def remove_group():
     os.system("clear")
     utils.print_menu_name("Remove group")
 
-    groups = get_all_groups()
+    groups = get_user_groups()
     names = [g["name"] for g in groups]
     groupname = utils.choose(names, "Select group to remove")
     if groupname is None:
