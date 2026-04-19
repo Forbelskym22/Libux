@@ -24,11 +24,12 @@ def main():
         "Apache2",             # 4
         "Routing",             # 5
         "Users & Groups",      # 6
-        "Quotas & Permissions", # 7
-        "",                    # 8
-        "Settings",            # 9
-        "",                    # 10
-        "Exit Libux"           # 11
+        "Quotas",              # 7
+        "Permissions",         # 8
+        "",                    # 9
+        "Settings",            # 10
+        "",                    # 11
+        "Exit Libux"           # 12
         ]
     last = 0
     while True:
@@ -53,10 +54,12 @@ def main():
         elif menu_entry_index == 6:
             users.run()
         elif menu_entry_index == 7:
-            perms.run()
-        elif menu_entry_index == 9:
+            perms.quotas_menu()
+        elif menu_entry_index == 8:
+            perms.permissions_menu()
+        elif menu_entry_index == 10:
             settings.manage_settings()
-        elif menu_entry_index == 11 or menu_entry_index is None:
+        elif menu_entry_index == 12 or menu_entry_index is None:
             utils.log("Exiting Libux...", "info")
             sys.exit(0)
  

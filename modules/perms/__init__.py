@@ -3,6 +3,8 @@ from modules import utils
 from .quotas import quotas_menu
 from .permissions import permissions_menu
 
+__all__ = ["quotas_menu", "permissions_menu", "run"]
+
 def show_perms_menu():
     last = 0
     while True:
