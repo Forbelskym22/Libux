@@ -105,33 +105,37 @@ def add_route():
     os.system("clear")
     utils.print_menu_name("Add static route")
 
+    # ── Destination network ────────────────────────────────────────────────────
     print(f"  {utils.GRAY}Destination network — the subnet you want to reach, e.g. 192.168.10.0/24{utils.RESET}")
-    network_input = utils.ask_required("Destination network (CIDR)")
-    if network_input is None:
-        return
-    try:
-        network = str(ipaddress.ip_network(network_input, strict=False))
-        if network != network_input:
-            utils.log(f"Network normalized to {network}.", "info")
-    except ValueError:
-        utils.log("Invalid network address.", "error")
-        utils.pause()
-        return
+    while True:
+        network_input = utils.ask_required("Destination network (CIDR)")
+        if network_input is None:
+            return
+        try:
+            network = str(ipaddress.ip_network(network_input, strict=False))
+            if network != network_input:
+                utils.log(f"Network normalized to {network}.", "info")
+            break
+        except ValueError:
+            utils.log("Not a valid network address. Try again or press Ctrl+C to cancel.", "error")
 
-    print(f"\n  {utils.GRAY}Gateway — the router/next-hop IP that can reach the destination{utils.RESET}")
-    gw = utils.ask_required("Gateway IP")
-    if gw is None:
-        return
-    if not utils.check_ip(gw):
-        utils.log("Invalid gateway IP.", "error")
-        utils.pause()
-        return
+    # ── Gateway ────────────────────────────────────────────────────────────────
+    print(f"\n  {utils.GRAY}Gateway — must be an IP on one of your local interfaces{utils.RESET}")
+    while True:
+        gw = utils.ask_required("Gateway IP")
+        if gw is None:
+            return
+        if utils.check_ip(gw):
+            break
+        utils.log("Not a valid IP address. Try again or press Ctrl+C to cancel.", "error")
 
+    # ── Interface ──────────────────────────────────────────────────────────────
     print(f"\n  {utils.GRAY}Interface — network interface to send traffic through (optional){utils.RESET}")
     iface = utils.ask("Interface")
     if iface is None:
         return
 
+    # ── Apply ──────────────────────────────────────────────────────────────────
     cmd = ["sudo", "ip", "route", "add", network, "via", gw]
     if iface:
         cmd += ["dev", iface]
@@ -140,20 +144,12 @@ def add_route():
     if result.returncode != 0:
         err = result.stderr.strip()
         if "invalid gateway" in err.lower() or "nexthop" in err.lower():
-            utils.log("Gateway is not directly reachable via a local interface.", "error")
-            if utils.choose(["yes", "no"], "Force add with onlink flag?") == "yes":
-                result2 = subprocess.run(cmd + ["onlink"], capture_output=True, text=True)
-                if result2.returncode != 0:
-                    utils.log(result2.stderr.strip() or "Failed to add route.", "error")
-                    utils.pause()
-                    return
-            else:
-                utils.pause()
-                return
+            utils.log(f"Gateway {gw} is not reachable via any local interface.", "error")
+            utils.log("Make sure the gateway IP belongs to a subnet your machine is connected to.", "info")
         else:
             utils.log(err or "Failed to add route.", "error")
-            utils.pause()
-            return
+        utils.pause()
+        return
     utils.log(f"Route {network} via {gw} added.", "success")
 
     if utils.choose(["yes", "no"], "Make persistent in /etc/network/interfaces?") == "yes":
