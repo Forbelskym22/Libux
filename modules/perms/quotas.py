@@ -48,9 +48,11 @@ def show_quota_usage():
     utils.print_menu_name("Quota usage")
     result = subprocess.run(["sudo", "repquota", "-a"], capture_output=True, text=True)
     if result.returncode != 0:
-        utils.log("Failed to read quota report. Are quotas enabled?", "error")
-    else:
-        print(result.stdout or "No quota data.")
+        utils.log("No quotas are enabled on any filesystem.", "error")
+        if utils.choose(["yes", "no"], "Enable quotas now?") == "yes":
+            enable_quotas()
+        return
+    print(result.stdout or "No quota data.")
     utils.pause()
 
 # ── Set user quota ─────────────────────────────────────────────────────────────
