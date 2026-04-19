@@ -8,7 +8,7 @@ A text-based interface application designed for basic configuration of a Linux s
 - [x] SSH
 - [x] Apache2
 - [x] Routing
-- [ ] Users and groups
+- [x] Users and groups
 - [ ] Disk quotas
 - [ ] Permissions
 - [ ] MariaDB
@@ -19,7 +19,8 @@ A text-based interface application designed for basic configuration of a Linux s
 > Implemented in v0.4.0: SSH
 > Implemented in v0.5.0: Apache2  
 > Implemented in v0.6.0: Routing  
-> Planned for future releases: Users and groups, Disk quotas, Permissions, MariaDB
+> Implemented in v0.7.0: Users and groups  
+> Planned for future releases: Disk quotas, Permissions, MariaDB
 
 
 ## Requirements
