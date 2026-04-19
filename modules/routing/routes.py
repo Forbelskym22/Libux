@@ -108,7 +108,7 @@ def add_route():
     # ── Destination network ────────────────────────────────────────────────────
     print(f"  {utils.GRAY}Destination network — the subnet you want to reach, e.g. 192.168.10.0/24{utils.RESET}")
     while True:
-        network_input = utils.ask_required("Destination network (CIDR)")
+        network_input = utils.ask_required("Destination network (e.g. 192.168.1.0/24)")
         if network_input is None:
             return
         try:
