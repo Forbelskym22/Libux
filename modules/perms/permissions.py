@@ -1,6 +1,8 @@
 import os
 import subprocess
 from modules import utils
+from modules.users.users import get_local_users
+from modules.users.groups import get_all_groups
 
 # ── View ───────────────────────────────────────────────────────────────────────
 
@@ -27,10 +29,30 @@ def change_owner():
 
     os.system("clear")
     utils.print_menu_name(f"Change owner - {path}")
-    print(f"  {utils.GRAY}Format: user or user:group{utils.RESET}")
-    owner = utils.ask_required("New owner (e.g. www-data or www-data:www-data)")
-    if owner is None:
+
+    users  = [u["name"] for u in get_local_users()]
+    groups = [g["name"] for g in get_all_groups()]
+
+    user = utils.choose(users + ["(type manually)"], "Select user")
+    if user is None:
         return
+    if user == "(type manually)":
+        user = utils.ask_required("Username")
+        if user is None:
+            return
+
+    include_group = utils.choose(["yes", "no"], "Also set group?") == "yes"
+    if include_group:
+        group = utils.choose(groups + ["(type manually)"], "Select group")
+        if group is None:
+            return
+        if group == "(type manually)":
+            group = utils.ask_required("Group")
+            if group is None:
+                return
+        owner = f"{user}:{group}"
+    else:
+        owner = user
 
     recursive = utils.choose(["yes", "no"], "Apply recursively?") == "yes"
     cmd = ["sudo", "chown"] + (["-R"] if recursive else []) + [owner, path]
