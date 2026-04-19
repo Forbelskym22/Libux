@@ -189,7 +189,7 @@ def pick_path(start="/", dirs_only=False):
         dirs  = [e for e in entries if os.path.isdir(os.path.join(current, e))]
         files = [] if dirs_only else [e for e in entries if os.path.isfile(os.path.join(current, e))]
 
-        options = ["[Select this directory]" if dirs_only else "[Select this path]"]
+        options = ["[Select this directory]", "[Type path manually]"]
         if current != "/":
             options.append("..")
         options += [f"{d}/" for d in dirs] + files
@@ -208,11 +208,23 @@ def pick_path(start="/", dirs_only=False):
 
         selected = options[idx]
 
-        if selected.startswith("[Select"):
+        if selected == "[Select this directory]":
             return current
+        elif selected == "[Type path manually]":
+            print()
+            try:
+                typed = input(f"{WHITE}Path: {RESET}").strip()
+            except KeyboardInterrupt:
+                continue
+            if typed and os.path.exists(typed):
+                return typed
+            log("Path does not exist.", "error")
         elif selected == "..":
             current = os.path.dirname(current)
         elif selected.endswith("/"):
             current = os.path.join(current, selected[:-1])
         else:
-            return os.path.join(current, selected)
+            if dirs_only:
+                current = os.path.join(current, selected)
+            else:
+                return os.path.join(current, selected)
