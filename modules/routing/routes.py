@@ -1,5 +1,6 @@
 import os
 import re
+import ipaddress
 import subprocess
 from modules import utils
 from .shared import INTERFACES_FILE
@@ -105,8 +106,16 @@ def add_route():
     utils.print_menu_name("Add static route")
 
     print(f"  {utils.GRAY}Destination network — the subnet you want to reach, e.g. 192.168.10.0/24{utils.RESET}")
-    network = utils.ask_required("Destination network (CIDR)")
-    if network is None:
+    network_input = utils.ask_required("Destination network (CIDR)")
+    if network_input is None:
+        return
+    try:
+        network = str(ipaddress.ip_network(network_input, strict=False))
+        if network != network_input:
+            utils.log(f"Network normalized to {network}.", "info")
+    except ValueError:
+        utils.log("Invalid network address.", "error")
+        utils.pause()
         return
 
     print(f"\n  {utils.GRAY}Gateway — the router/next-hop IP that can reach the destination{utils.RESET}")
@@ -119,7 +128,7 @@ def add_route():
         return
 
     print(f"\n  {utils.GRAY}Interface — network interface to send traffic through (optional){utils.RESET}")
-    iface = utils.ask("Interface (Enter to skip)")
+    iface = utils.ask("Interface")
     if iface is None:
         return
 
