@@ -121,7 +121,7 @@ def _ask_bits(entity):
     return digit, sym
 
 def permission_wizard():
-    """Interactive wizard that builds chmod octal from r/w/x questions."""
+    """Interactive wizard that builds chmod octal from r/w/x questions + special bits."""
     results = []
     for entity in ("Owner", "Group", "Others"):
         bits = _ask_bits(entity)
@@ -129,15 +129,35 @@ def permission_wizard():
             return None
         results.append(bits)
 
+    # special bits
     os.system("clear")
-    octal  = "".join(str(d) for d, _ in results)
-    sym    = "".join(s for _, s in results)
-    labels = ["Owner", "Group", "Others"]
+    print(f"\n  {utils.WHITE}Special bits{utils.RESET}\n")
+    print(f"  {utils.GRAY}setuid  — file runs with owner's privileges (e.g. passwd){utils.RESET}")
+    setuid = utils.choose(["yes", "no"], "Setuid?") == "yes"
+    print(f"\n  {utils.GRAY}setgid  — new files in dir inherit the directory's group{utils.RESET}")
+    setgid = utils.choose(["yes", "no"], "Setgid?") == "yes"
+    print(f"\n  {utils.GRAY}sticky  — only file owner can delete it (e.g. /tmp){utils.RESET}")
+    sticky = utils.choose(["yes", "no"], "Sticky bit?") == "yes"
+
+    special = (4 if setuid else 0) + (2 if setgid else 0) + (1 if sticky else 0)
+
+    os.system("clear")
+    base_octal = "".join(str(d) for d, _ in results)
+    sym        = "".join(s for _, s in results)
+    octal      = f"{special}{base_octal}" if special else base_octal
+    labels     = ["Owner", "Group", "Others"]
 
     print(f"\n  {utils.GRAY}{'Entity':<10}{'Permissions':<14}{'Value'}{utils.RESET}")
     print(f"  {utils.GRAY}{'─' * 32}{utils.RESET}")
     for i, (digit, s) in enumerate(results):
         print(f"  {utils.YELLOW}{labels[i]:<10}{utils.WHITE}{s:<14}{utils.GRAY}{digit}{utils.RESET}")
+    if special:
+        spec_str = " ".join(filter(None, [
+            "setuid" if setuid else "",
+            "setgid" if setgid else "",
+            "sticky" if sticky else "",
+        ]))
+        print(f"  {utils.YELLOW}{'Special':<10}{utils.PURPLE}{spec_str:<14}{utils.GRAY}{special}{utils.RESET}")
     print(f"\n  {utils.GREEN}Result: {octal}  ({sym}){utils.RESET}\n")
 
     if utils.choose(["yes", "no"], f"Apply {octal}?") != "yes":
