@@ -160,3 +160,38 @@ def toggle_lock():
         result = subprocess.run(["sudo", "passwd", "-l", username], capture_output=True, text=True)
         utils.log(f"User '{username}' locked.", "success" if result.returncode == 0 else "error")
     utils.pause()
+
+# ── Sudo access ────────────────────────────────────────────────────────────────
+
+def has_sudo(username):
+    result = subprocess.run(["groups", username], capture_output=True, text=True)
+    return "sudo" in result.stdout.split()
+
+def toggle_sudo():
+    os.system("clear")
+    utils.print_menu_name("Sudo access")
+
+    users = get_local_users()
+    if not users:
+        utils.log("No local users found.", "info")
+        utils.pause()
+        return
+
+    names = [u["name"] for u in users]
+    username = utils.choose(names, "Select user")
+    if username is None:
+        return
+
+    if has_sudo(username):
+        if utils.choose(["yes", "no"], f"Revoke sudo from '{username}'?", "error") != "yes":
+            return
+        result = subprocess.run(["sudo", "gpasswd", "-d", username, "sudo"],
+                                capture_output=True, text=True)
+        utils.log(f"Sudo access revoked from '{username}'.", "success" if result.returncode == 0 else "error")
+    else:
+        if utils.choose(["yes", "no"], f"Grant sudo to '{username}'?") != "yes":
+            return
+        result = subprocess.run(["sudo", "usermod", "-aG", "sudo", username],
+                                capture_output=True, text=True)
+        utils.log(f"Sudo access granted to '{username}'. Re-login required to take effect.", "success" if result.returncode == 0 else "error")
+    utils.pause()

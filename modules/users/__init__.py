@@ -1,6 +1,6 @@
 import os
 from modules import utils
-from .users import show_users, add_user, remove_user, change_password, toggle_lock
+from .users import show_users, add_user, remove_user, change_password, toggle_lock, toggle_sudo
 from .groups import show_groups, add_group, remove_group, manage_membership
 
 def show_users_menu():
@@ -15,13 +15,14 @@ def show_users_menu():
             "Remove user",       # 2
             "Change password",   # 3
             "Lock / unlock",     # 4
-            "",                  # 5
-            "Show groups",       # 6
-            "Add group",         # 7
-            "Remove group",      # 8
-            "Group membership",  # 9
-            "",                  # 10
-            "Back",              # 11
+            "Sudo access",       # 5
+            "",                  # 6
+            "Show groups",       # 7
+            "Add group",         # 8
+            "Remove group",      # 9
+            "Group membership",  # 10
+            "",                  # 11
+            "Back",              # 12
         ]
 
         choice = utils.show_menu(utils.create_menu(options, last))
@@ -36,15 +37,17 @@ def show_users_menu():
             change_password()
         elif choice == 4:
             toggle_lock()
-        elif choice == 6:
-            show_groups()
+        elif choice == 5:
+            toggle_sudo()
         elif choice == 7:
-            add_group()
+            show_groups()
         elif choice == 8:
-            remove_group()
+            add_group()
         elif choice == 9:
+            remove_group()
+        elif choice == 10:
             manage_membership()
-        elif choice == 11 or choice is None:
+        elif choice == 12 or choice is None:
             return
 
         last = choice
