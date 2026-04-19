@@ -50,8 +50,11 @@ def show_users():
     print(f"  {utils.GRAY}{'Username':<20}{'UID':<8}{'Home':<25}{'Shell'}{utils.RESET}")
     print(f"  {utils.GRAY}{'─' * 60}{utils.RESET}")
     for u in users:
-        locked = " [locked]" if is_locked(u["name"]) else ""
-        name = f"{utils.YELLOW}{u['name']}{utils.GRAY}{locked}{utils.RESET}"
+        tags = []
+        if has_sudo(u["name"]):  tags.append("sudo")
+        if is_locked(u["name"]): tags.append("locked")
+        tag_str = f" [{', '.join(tags)}]" if tags else ""
+        name = f"{utils.YELLOW}{u['name']}{utils.GRAY}{tag_str}{utils.RESET}"
         print(f"  {name:<38}{u['uid']:<8}{utils.WHITE}{u['home']:<25}{utils.GRAY}{u['shell']}{utils.RESET}")
     print()
     utils.pause()
