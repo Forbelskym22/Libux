@@ -1,0 +1,1 @@
+FSTAB = "/etc/fstab"
