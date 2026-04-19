@@ -9,6 +9,7 @@ from modules import dhcp
 from modules import ssh
 from modules import apache2
 from modules import routing
+from modules import users
 
 def main():
     if os.geteuid() != 0:
@@ -21,10 +22,11 @@ def main():
         "SSH",                 # 3
         "Apache2",             # 4
         "Routing",             # 5
-        "",                    # 6
-        "Settings",            # 7
-        "",                    # 8
-        "Exit Libux"           # 9
+        "Users & Groups",      # 6
+        "",                    # 7
+        "Settings",            # 8
+        "",                    # 9
+        "Exit Libux"           # 10
         ]
     last = 0
     while True:
@@ -46,9 +48,11 @@ def main():
             apache2.run()
         elif menu_entry_index == 5:
             routing.run()
-        elif menu_entry_index == 7:
+        elif menu_entry_index == 6:
+            users.run()
+        elif menu_entry_index == 8:
             settings.manage_settings()
-        elif menu_entry_index == 9 or menu_entry_index is None:
+        elif menu_entry_index == 10 or menu_entry_index is None:
             utils.log("Exiting Libux...", "info")
             sys.exit(0)
  
