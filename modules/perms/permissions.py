@@ -180,11 +180,11 @@ def change_permissions():
         symbolic, octal = result.stdout.strip().split()
         print(f"  {utils.GRAY}Current: {utils.YELLOW}{symbolic}  ({octal}){utils.RESET}\n")
 
-    # preset menu with descriptions
+    # preset menu with descriptions — no ANSI colors in labels
     labels = [
-        f"{o:<8} {s:<12} {utils.GRAY}{d}{utils.RESET}"
+        f"{o:<8} {s:<12} {d}"
         if o not in ("(manual)", "(wizard)") else
-        f"{'(wizard)' if o == '(wizard)' else '(manual entry)':<22} {utils.GRAY}{d}{utils.RESET}"
+        f"{'(wizard)' if o == '(wizard)' else '(manual entry)':<22} {d}"
         for o, s, d in PRESETS
     ]
     choice = utils.choose(labels, "Select permission preset")

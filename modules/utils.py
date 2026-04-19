@@ -186,15 +186,18 @@ def pick_path(start="/", dirs_only=False):
         return None
 
     if method == "Type path manually":
-        print()
-        try:
-            typed = input(f"{WHITE}Path: {RESET}").strip()
-        except KeyboardInterrupt:
-            return None
-        if typed and os.path.exists(typed):
-            return typed
-        log("Path does not exist.", "error")
-        return None
+        while True:
+            print()
+            try:
+                typed = input(f"{WHITE}Path: {RESET}").strip()
+            except KeyboardInterrupt:
+                return None
+            if not typed:
+                log("Path cannot be empty. Try again or press Ctrl+C to cancel.", "error")
+                continue
+            if os.path.exists(typed):
+                return typed
+            log(f"Path '{typed}' does not exist. Try again or press Ctrl+C to cancel.", "error")
 
     # ── Step 2: TUI browser ────────────────────────────────────────────────────
     current = start
