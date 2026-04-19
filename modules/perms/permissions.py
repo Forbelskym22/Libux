@@ -74,9 +74,14 @@ def change_group():
 
     os.system("clear")
     utils.print_menu_name(f"Change group - {path}")
-    group = utils.ask_required("New group")
+    groups = [g["name"] for g in get_user_groups()]
+    group = utils.choose(groups + ["(type manually)"], "Select group")
     if group is None:
         return
+    if group == "(type manually)":
+        group = utils.ask_required("Group")
+        if group is None:
+            return
 
     recursive = utils.choose(["yes", "no"], "Apply recursively?") == "yes"
     cmd = ["sudo", "chgrp"] + (["-R"] if recursive else []) + [group, path]
