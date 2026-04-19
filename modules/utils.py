@@ -200,7 +200,7 @@ def pick_path(start="/", dirs_only=False):
     current = start
     while True:
         os.system("clear")
-        print_menu_name(f"Browse - {current}  {GRAY}Enter=open  Ctrl+O=select dir{RESET}")
+        print_menu_name(f"Browse - {current}")
 
         try:
             entries = sorted(os.listdir(current))
@@ -212,14 +212,13 @@ def pick_path(start="/", dirs_only=False):
         dirs  = [e for e in entries if os.path.isdir(os.path.join(current, e))]
         files = [] if dirs_only else [e for e in entries if os.path.isfile(os.path.join(current, e))]
 
-        options = []
+        options = [f"[ Select: {current} ]"]
         if current != "/":
             options.append("..")
         options += [f"{d}/" for d in dirs] + files
 
         menu = TerminalMenu(
             options,
-            accept_keys=("enter", "ctrl-o"),
             cycle_cursor=True,
             clear_screen=False,
             menu_cursor_style=MENU_CURSOR_STYLE,
@@ -233,15 +232,12 @@ def pick_path(start="/", dirs_only=False):
             return None
 
         selected = options[idx]
-        key = menu.chosen_accept_key
 
-        if selected == "..":
+        if selected.startswith("[ Select:"):
+            return current
+        elif selected == "..":
             current = os.path.dirname(current)
         elif selected.endswith("/"):
-            dirname = selected[:-1]
-            if key == "ctrl-o":
-                return os.path.join(current, dirname)
-            else:
-                current = os.path.join(current, dirname)
+            current = os.path.join(current, selected[:-1])
         else:
             return os.path.join(current, selected)
