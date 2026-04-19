@@ -167,3 +167,52 @@ def print_menu_name(title):
     Print menu header with purple highlight
     """
     print(f"{PURPLE}---{RESET} {WHITE}{title}{RESET} {PURPLE}---{RESET} {GRAY}Ctrl+C (exit){RESET}")
+
+def pick_path(start="/", dirs_only=False):
+    """
+    Interactive file browser. Returns selected path or None on Ctrl+C.
+    dirs_only=True limits selection to directories.
+    """
+    import os
+    current = start
+    while True:
+        os.system("clear")
+        print_menu_name(f"Browse - {current}")
+
+        try:
+            entries = sorted(os.listdir(current))
+        except PermissionError:
+            log("Permission denied.", "error")
+            current = os.path.dirname(current)
+            continue
+
+        dirs  = [e for e in entries if os.path.isdir(os.path.join(current, e))]
+        files = [] if dirs_only else [e for e in entries if os.path.isfile(os.path.join(current, e))]
+
+        options = ["[Select this directory]" if dirs_only else "[Select this path]"]
+        if current != "/":
+            options.append("..")
+        options += [f"{d}/" for d in dirs] + files
+
+        menu = TerminalMenu(
+            options, cycle_cursor=True, clear_screen=False,
+            menu_cursor_style=MENU_CURSOR_STYLE
+        )
+        try:
+            idx = menu.show()
+        except KeyboardInterrupt:
+            return None
+
+        if idx is None:
+            return None
+
+        selected = options[idx]
+
+        if selected.startswith("[Select"):
+            return current
+        elif selected == "..":
+            current = os.path.dirname(current)
+        elif selected.endswith("/"):
+            current = os.path.join(current, selected[:-1])
+        else:
+            return os.path.join(current, selected)
