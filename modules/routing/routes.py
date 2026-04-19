@@ -138,7 +138,12 @@ def add_route():
 
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        utils.log(result.stderr.strip() or "Failed to add route.", "error")
+        err = result.stderr.strip()
+        if "invalid gateway" in err.lower() or "nexthop" in err.lower():
+            utils.log(f"Gateway {gw} is not directly reachable.", "error")
+            utils.log("The gateway must be on a subnet assigned to one of your interfaces.", "info")
+        else:
+            utils.log(err or "Failed to add route.", "error")
         utils.pause()
         return
     utils.log(f"Route {network} via {gw} added.", "success")
