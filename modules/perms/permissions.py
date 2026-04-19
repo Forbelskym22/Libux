@@ -2,7 +2,7 @@ import os
 import subprocess
 from modules import utils
 from modules.users.users import get_local_users
-from modules.users.groups import get_all_groups
+from modules.users.groups import get_user_groups
 
 # ── View ───────────────────────────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ def change_owner():
     utils.print_menu_name(f"Change owner - {path}")
 
     users  = [u["name"] for u in get_local_users()]
-    groups = [g["name"] for g in get_all_groups()]
+    groups = [g["name"] for g in get_user_groups()]
 
     user = utils.choose(users + ["(type manually)"], "Select user")
     if user is None:
