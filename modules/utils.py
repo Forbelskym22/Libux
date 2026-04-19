@@ -200,7 +200,7 @@ def pick_path(start="/", dirs_only=False):
     current = start
     while True:
         os.system("clear")
-        print_menu_name(f"Browse - {current}  {GRAY}Enter=open  →=select dir{RESET}")
+        print_menu_name(f"Browse - {current}  {GRAY}Enter=open  Space=select dir{RESET}")
 
         try:
             entries = sorted(os.listdir(current))
@@ -219,7 +219,7 @@ def pick_path(start="/", dirs_only=False):
 
         menu = TerminalMenu(
             options,
-            accept_keys=("enter", "right"),
+            accept_keys=("enter", "space"),
             cycle_cursor=True,
             clear_screen=False,
             menu_cursor_style=MENU_CURSOR_STYLE,
@@ -239,7 +239,7 @@ def pick_path(start="/", dirs_only=False):
             current = os.path.dirname(current)
         elif selected.endswith("/"):
             dirname = selected[:-1]
-            if key == "right":
+            if key == "space":
                 return os.path.join(current, dirname)
             else:
                 current = os.path.join(current, dirname)
