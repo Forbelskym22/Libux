@@ -104,11 +104,13 @@ def add_route():
     os.system("clear")
     utils.print_menu_name("Add static route")
 
-    network = utils.ask_required("Network (e.g. 192.168.10.0/24)")
+    print(f"  {utils.GRAY}Destination network — the subnet you want to reach, e.g. 192.168.10.0/24{utils.RESET}")
+    network = utils.ask_required("Destination network (CIDR)")
     if network is None:
         return
 
-    gw = utils.ask_required("Via gateway IP")
+    print(f"\n  {utils.GRAY}Gateway — the router/next-hop IP that can reach the destination{utils.RESET}")
+    gw = utils.ask_required("Gateway IP")
     if gw is None:
         return
     if not utils.check_ip(gw):
@@ -116,6 +118,7 @@ def add_route():
         utils.pause()
         return
 
+    print(f"\n  {utils.GRAY}Interface — network interface to send traffic through (optional){utils.RESET}")
     iface = utils.ask("Interface (Enter to skip)")
     if iface is None:
         return
