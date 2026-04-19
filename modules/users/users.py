@@ -180,10 +180,11 @@ def toggle_sudo():
         utils.pause()
         return
 
-    names = [u["name"] for u in users]
-    username = utils.choose(names, "Select user")
-    if username is None:
+    names = [f"{u['name']} [sudo]" if has_sudo(u["name"]) else u["name"] for u in users]
+    choice = utils.choose(names, "Select user")
+    if choice is None:
         return
+    username = choice.replace(" [sudo]", "")
 
     if has_sudo(username):
         if utils.choose(["yes", "no"], f"Revoke sudo from '{username}'?", "error") != "yes":
