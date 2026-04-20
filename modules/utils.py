@@ -102,13 +102,13 @@ def check_ip(ip):
 def check_port(port):
     return port.isdigit() and (0 < int(port) < 65536)
 
-def choose(options, message="", type= "info"):
+def choose(options, message="", type= "info", cursor_index=0):
     if not options:
         log("No options to choose from", "error")
         return None
     if message:
         log(message, type)
-    menu = TerminalMenu(options, cycle_cursor=True, clear_screen=False, menu_cursor_style=MENU_CURSOR_STYLE)
+    menu = TerminalMenu(options, cursor_index=cursor_index, cycle_cursor=True, clear_screen=False, menu_cursor_style=MENU_CURSOR_STYLE)
     choice = show_menu(menu)
     if choice is None:
         return None
@@ -168,24 +168,120 @@ def print_menu_name(title):
     """
     print(f"{PURPLE}---{RESET} {WHITE}{title}{RESET} {PURPLE}---{RESET} {GRAY}Ctrl+C (exit){RESET}")
 
+_last_path = None  # remembered across pick_path calls
+_QUICK_DIRS = ["/etc", "/var/log", "/var/www", "/tmp", "/home", "/root", "/"]
+
+
+def _human_size(n):
+    for unit in ("B", "K", "M", "G", "T"):
+        if n < 1024:
+            return f"{n:.0f}{unit}" if unit == "B" else f"{n:.1f}{unit}"
+        n /= 1024
+    return f"{n:.1f}P"
+
+
+def _preview_entry(full_path):
+    """Return multi-line info about a filesystem entry for the preview pane."""
+    import os
+    import stat as stat_mod
+    import time
+    try:
+        st = os.lstat(full_path)
+    except OSError as e:
+        return f"error: {e}"
+
+    mode_str = stat_mod.filemode(st.st_mode)
+    octal = oct(st.st_mode)[-3:]
+    lines = []
+
+    if stat_mod.S_ISLNK(st.st_mode):
+        try:
+            target = os.readlink(full_path)
+        except OSError:
+            target = "?"
+        lines.append(f"type:    symlink")
+        lines.append(f"target:  {target}")
+        try:
+            tst = os.stat(full_path)  # follows link
+            lines.append(f"points to: {stat_mod.filemode(tst.st_mode)}")
+        except OSError:
+            lines.append("points to: (broken)")
+    elif stat_mod.S_ISDIR(st.st_mode):
+        lines.append("type:    directory")
+        try:
+            count = len(os.listdir(full_path))
+            lines.append(f"entries: {count}")
+        except PermissionError:
+            lines.append("entries: (permission denied)")
+    elif stat_mod.S_ISREG(st.st_mode):
+        lines.append("type:    file")
+        lines.append(f"size:    {_human_size(st.st_size)}")
+        if os.access(full_path, os.X_OK):
+            lines.append("         (executable)")
+    else:
+        lines.append("type:    special")
+
+    lines.append(f"mode:    {mode_str}  ({octal})")
+    lines.append(f"uid/gid: {st.st_uid}/{st.st_gid}")
+    try:
+        mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(st.st_mtime))
+        lines.append(f"mtime:   {mtime}")
+    except (ValueError, OSError):
+        pass
+    return "\n".join(lines)
+
+
 def pick_path(start="/", dirs_only=False):
     """
     Interactive file/directory picker.
-    First asks whether to type a path or browse via TUI.
-    In TUI: Enter navigates into dirs / selects files.
-            Ctrl+Enter (ctrl-j) selects the highlighted directory.
+    Quick-start menu offers last-used path, home, common dirs, or manual entry.
+    Browse mode shows preview pane with mode/size/mtime for the highlighted entry.
     Returns selected path or None on Ctrl+C.
     """
+    global _last_path
     import os
 
-    # ── Step 1: method ─────────────────────────────────────────────────────────
+    # ── Quick-start menu ───────────────────────────────────────────────────────
     os.system("clear")
     print_menu_name("Select path")
-    method = choose(["Browse (TUI)", "Type path manually"], "How would you like to select the path?")
-    if method is None:
+
+    home = os.path.expanduser("~")
+    quick_options = []
+    quick_targets = []
+    seen = set()
+
+    def _add(label, kind, value):
+        key = (kind, value)
+        if key in seen:
+            return
+        seen.add(key)
+        quick_options.append(label)
+        quick_targets.append((kind, value))
+
+    if _last_path and os.path.exists(_last_path):
+        start_from = _last_path if os.path.isdir(_last_path) else os.path.dirname(_last_path)
+        _add(f"Last used:      {_last_path}", "browse", start_from)
+
+    if os.path.isdir(home):
+        _add(f"Home:           {home}", "browse", home)
+
+    for d in _QUICK_DIRS:
+        if os.path.isdir(d):
+            _add(f"Go to:          {d}", "browse", d)
+
+    _add(f"Browse from:    {start}", "browse", start)
+    _add("Type path manually", "type", None)
+
+    idx = show_menu(create_menu(quick_options))
+    if idx is None:
         return None
 
-    if method == "Type path manually":
+    mode, value = quick_targets[idx]
+
+    # ── Manual entry ───────────────────────────────────────────────────────────
+    if mode == "type":
+        os.system("clear")
+        print_menu_name("Enter path")
         while True:
             print()
             try:
@@ -195,12 +291,14 @@ def pick_path(start="/", dirs_only=False):
             if not typed:
                 log("Path cannot be empty. Try again or press Ctrl+C to cancel.", "error")
                 continue
+            typed = os.path.expanduser(typed)
             if os.path.exists(typed):
+                _last_path = typed
                 return typed
             log(f"Path '{typed}' does not exist. Try again or press Ctrl+C to cancel.", "error")
 
-    # ── Step 2: TUI browser ────────────────────────────────────────────────────
-    current = start
+    # ── Browse ─────────────────────────────────────────────────────────────────
+    current = value
     while True:
         os.system("clear")
         print_menu_name(f"Browse - {current}")
@@ -209,38 +307,89 @@ def pick_path(start="/", dirs_only=False):
             entries = sorted(os.listdir(current))
         except PermissionError:
             log("Permission denied.", "error")
-            current = os.path.dirname(current)
+            current = os.path.dirname(current) or "/"
+            continue
+        except FileNotFoundError:
+            current = "/"
             continue
 
-        dirs  = [e for e in entries if os.path.isdir(os.path.join(current, e))]
-        files = [] if dirs_only else [e for e in entries if os.path.isfile(os.path.join(current, e))]
+        items = []  # list of (label, kind, full_path)
+        for e in entries:
+            full = os.path.join(current, e)
+            try:
+                is_link = os.path.islink(full)
+                is_dir  = os.path.isdir(full)   # follows symlink
+                is_file = os.path.isfile(full)
+            except OSError:
+                continue
 
-        options = [f"[ Select: {current} ]"]
+            if dirs_only and not is_dir:
+                continue
+
+            if is_link:
+                try:
+                    target = os.readlink(full)
+                except OSError:
+                    target = "?"
+                label = f"{e}@ -> {target}"
+                kind  = "dir" if is_dir else "file"
+            elif is_dir:
+                label = f"{e}/"
+                kind  = "dir"
+            elif is_file:
+                try:
+                    size = _human_size(os.stat(full).st_size)
+                    exe  = os.access(full, os.X_OK)
+                except OSError:
+                    size, exe = "?", False
+                label = f"{e}{'*' if exe else ''}    {size}"
+                kind  = "file"
+            else:
+                label = e
+                kind  = "file"
+
+            items.append((label, kind, full))
+
+        # dirs first, then files; alphabetic within each group
+        items.sort(key=lambda x: (x[1] != "dir", x[0].lower()))
+
+        header = [(f"[ Select: {current} ]", "select", current)]
         if current != "/":
-            options.append("..")
-        options += [f"{d}/" for d in dirs] + files
+            header.append(("..  (parent)", "parent", os.path.dirname(current) or "/"))
+
+        all_items = header + items
+        options   = [lbl for lbl, _, _ in all_items]
+
+        label_to_path = {lbl: full for lbl, k, full in all_items if k != "select"}
+        def _preview(entry_label):
+            target = label_to_path.get(entry_label)
+            if target is None:
+                return f"Current directory:\n{current}"
+            return _preview_entry(target)
 
         menu = TerminalMenu(
             options,
             cycle_cursor=True,
             clear_screen=False,
             menu_cursor_style=MENU_CURSOR_STYLE,
+            preview_command=_preview,
+            preview_size=0.4,
         )
         try:
-            idx = menu.show()
+            sel_idx = menu.show()
         except KeyboardInterrupt:
             return None
-
-        if idx is None:
+        if sel_idx is None:
             return None
 
-        selected = options[idx]
-
-        if selected.startswith("[ Select:"):
+        _, kind, path = all_items[sel_idx]
+        if kind == "select":
+            _last_path = current
             return current
-        elif selected == "..":
-            current = os.path.dirname(current)
-        elif selected.endswith("/"):
-            current = os.path.join(current, selected[:-1])
+        elif kind == "parent":
+            current = path
+        elif kind == "dir":
+            current = path
         else:
-            return os.path.join(current, selected)
+            _last_path = path
+            return path

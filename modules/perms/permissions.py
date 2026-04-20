@@ -1,8 +1,37 @@
 import os
 import subprocess
+from simple_term_menu import TerminalMenu
 from modules import utils
 from modules.users.users import get_local_users
 from modules.users.groups import get_user_groups
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+def _get_current_owner(path):
+    """Return (user, group) or (None, None) on failure."""
+    result = subprocess.run(["stat", "-c", "%U %G", path], capture_output=True, text=True)
+    if result.returncode != 0:
+        return None, None
+    parts = result.stdout.strip().split()
+    if len(parts) != 2:
+        return None, None
+    return parts[0], parts[1]
+
+def _get_current_mode(path):
+    """Return (symbolic, octal) or (None, None) on failure."""
+    result = subprocess.run(["stat", "-c", "%A %a", path], capture_output=True, text=True)
+    if result.returncode != 0:
+        return None, None
+    parts = result.stdout.strip().split()
+    if len(parts) != 2:
+        return None, None
+    return parts[0], parts[1]
+
+def _ask_recursive(path):
+    """Ask recursive only when path is a directory; files always return False."""
+    if not os.path.isdir(path):
+        return False
+    return utils.choose(["yes", "no"], "Apply recursively?") == "yes"
 
 # ── View ───────────────────────────────────────────────────────────────────────
 
@@ -30,10 +59,16 @@ def change_owner():
     os.system("clear")
     utils.print_menu_name(f"Change owner - {path}")
 
+    cur_user, cur_group = _get_current_owner(path)
+    if cur_user:
+        print(f"  {utils.GRAY}Current: {utils.YELLOW}{cur_user}:{cur_group}{utils.RESET}\n")
+
     users  = [u["name"] for u in get_local_users()]
     groups = [g["name"] for g in get_user_groups()]
 
-    user = utils.choose(users + ["(type manually)"], "Select user")
+    user_options = users + ["(type manually)"]
+    user_cursor = users.index(cur_user) if cur_user in users else 0
+    user = utils.choose(user_options, "Select user", cursor_index=user_cursor)
     if user is None:
         return
     if user == "(type manually)":
@@ -43,7 +78,9 @@ def change_owner():
 
     include_group = utils.choose(["yes", "no"], "Also set group?") == "yes"
     if include_group:
-        group = utils.choose(groups + ["(type manually)"], "Select group")
+        group_options = groups + ["(type manually)"]
+        group_cursor = groups.index(cur_group) if cur_group in groups else 0
+        group = utils.choose(group_options, "Select group", cursor_index=group_cursor)
         if group is None:
             return
         if group == "(type manually)":
@@ -54,7 +91,7 @@ def change_owner():
     else:
         owner = user
 
-    recursive = utils.choose(["yes", "no"], "Apply recursively?") == "yes"
+    recursive = _ask_recursive(path)
     cmd = ["sudo", "chown"] + (["-R"] if recursive else []) + [owner, path]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -74,8 +111,15 @@ def change_group():
 
     os.system("clear")
     utils.print_menu_name(f"Change group - {path}")
+
+    _, cur_group = _get_current_owner(path)
+    if cur_group:
+        print(f"  {utils.GRAY}Current group: {utils.YELLOW}{cur_group}{utils.RESET}\n")
+
     groups = [g["name"] for g in get_user_groups()]
-    group = utils.choose(groups + ["(type manually)"], "Select group")
+    group_options = groups + ["(type manually)"]
+    group_cursor = groups.index(cur_group) if cur_group in groups else 0
+    group = utils.choose(group_options, "Select group", cursor_index=group_cursor)
     if group is None:
         return
     if group == "(type manually)":
@@ -83,7 +127,7 @@ def change_group():
         if group is None:
             return
 
-    recursive = utils.choose(["yes", "no"], "Apply recursively?") == "yes"
+    recursive = _ask_recursive(path)
     cmd = ["sudo", "chgrp"] + (["-R"] if recursive else []) + [group, path]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -94,70 +138,99 @@ def change_group():
 
 # ── Change permissions ─────────────────────────────────────────────────────────
 
-PRESETS = [
-    ("644", "rw-r--r--", "File: owner can read/write, everyone else can read"),
-    ("755", "rwxr-xr-x", "Dir/script: owner full access, everyone can read & enter"),
-    ("600", "rw-------", "Private file: only owner can read/write"),
-    ("700", "rwx------", "Private dir/script: only owner has any access"),
-    ("750", "rwxr-x---", "Dir/script: owner full, group can read & enter, others nothing"),
-    ("640", "rw-r-----", "File: owner read/write, group read, others nothing"),
-    ("777", "rwxrwxrwx", "Everyone full access (not recommended)"),
-    ("(wizard)", "",      "Step-by-step wizard — set read/write/execute for each entity"),
-    ("(manual)", "",      "Enter octal or symbolic mode manually (e.g. 754, u+x, go-w)"),
-]
+def _bit_matrix(current_octal=None):
+    """Multi-select matrix for rwx+special bits. Returns octal string or None on cancel."""
+    preselected = []
+    if current_octal:
+        padded  = current_octal.zfill(4)
+        special = int(padded[0])
+        owner   = int(padded[1])
+        group   = int(padded[2])
+        other   = int(padded[3])
 
-def _ask_bits(entity):
-    """Ask read/write/execute for one entity, return octal digit and symbolic string."""
-    os.system("clear")
-    print(f"\n  {utils.WHITE}Permissions for: {utils.YELLOW}{entity}{utils.RESET}\n")
-    print(f"  {utils.GRAY}read    — view file contents or list directory{utils.RESET}")
-    r = utils.choose(["yes", "no"], "Read?") == "yes"
-    print(f"\n  {utils.GRAY}write   — modify file or create/delete files in directory{utils.RESET}")
-    w = utils.choose(["yes", "no"], "Write?") == "yes"
-    print(f"\n  {utils.GRAY}execute — run file as program, or enter/traverse directory{utils.RESET}")
-    x = utils.choose(["yes", "no"], "Execute?") == "yes"
-    digit = (4 if r else 0) + (2 if w else 0) + (1 if x else 0)
-    sym   = ("r" if r else "-") + ("w" if w else "-") + ("x" if x else "-")
-    return digit, sym
+        bits = [
+            owner   & 4, owner   & 2, owner   & 1,
+            group   & 4, group   & 2, group   & 1,
+            other   & 4, other   & 2, other   & 1,
+            special & 4, special & 2, special & 1,
+        ]
+        preselected = [i for i, b in enumerate(bits) if b]
 
-def permission_wizard():
-    """Interactive wizard that builds chmod octal from r/w/x questions + special bits."""
-    results = []
-    for entity in ("Owner", "Group", "Others"):
-        bits = _ask_bits(entity)
-        if bits is None:
-            return None
-        results.append(bits)
-
-    # special bits
-    os.system("clear")
-    print(f"\n  {utils.WHITE}Special bits{utils.RESET}\n")
-    print(f"  {utils.GRAY}setuid  — file runs with owner's privileges (e.g. passwd){utils.RESET}")
-    setuid = utils.choose(["yes", "no"], "Setuid?") == "yes"
-    print(f"\n  {utils.GRAY}setgid  — new files in dir inherit the directory's group{utils.RESET}")
-    setgid = utils.choose(["yes", "no"], "Setgid?") == "yes"
-    print(f"\n  {utils.GRAY}sticky  — only file owner can delete it (e.g. /tmp){utils.RESET}")
-    sticky = utils.choose(["yes", "no"], "Sticky bit?") == "yes"
-
-    special = (4 if setuid else 0) + (2 if setgid else 0) + (1 if sticky else 0)
+    options = [
+        "Owner:   read     (view file / list dir)",
+        "Owner:   write    (modify file / create in dir)",
+        "Owner:   execute  (run file / enter dir)",
+        "Group:   read",
+        "Group:   write",
+        "Group:   execute",
+        "Other:   read",
+        "Other:   write",
+        "Other:   execute",
+        "Setuid           (file runs with owner's privileges, e.g. passwd)",
+        "Setgid           (new files in dir inherit dir's group)",
+        "Sticky           (only file owner can delete, e.g. /tmp)",
+    ]
 
     os.system("clear")
-    base_octal = "".join(str(d) for d, _ in results)
-    sym        = "".join(s for _, s in results)
-    octal      = f"{special}{base_octal}" if special else base_octal
-    labels     = ["Owner", "Group", "Others"]
+    utils.print_menu_name("Permission matrix")
+    print()
+    print(f"  {utils.WHITE}Controls:{utils.RESET}")
+    print(f"    {utils.YELLOW}↑ / ↓{utils.GRAY}        move between bits{utils.RESET}")
+    print(f"    {utils.YELLOW}Space / Tab{utils.GRAY}  toggle bit on/off (checked bits show in brackets){utils.RESET}")
+    print(f"    {utils.YELLOW}Enter{utils.GRAY}        confirm selection{utils.RESET}")
+    print(f"    {utils.YELLOW}Ctrl+C{utils.GRAY}       cancel{utils.RESET}")
+    if current_octal:
+        print(f"\n  {utils.GRAY}Current mode: {utils.YELLOW}{current_octal}{utils.GRAY} (already pre-selected below){utils.RESET}")
+    print()
 
-    print(f"\n  {utils.GRAY}{'Entity':<10}{'Permissions':<14}{'Value'}{utils.RESET}")
+    menu = TerminalMenu(
+        options,
+        multi_select=True,
+        show_multi_select_hint=True,
+        multi_select_select_on_accept=False,
+        multi_select_empty_ok=True,
+        preselected_entries=preselected or None,
+        cycle_cursor=True,
+        clear_screen=False,
+        menu_cursor_style=utils.MENU_CURSOR_STYLE,
+    )
+    try:
+        chosen = menu.show()
+    except KeyboardInterrupt:
+        return None
+    if chosen is None:
+        return None
+
+    selected = set(chosen)
+    def has(idx): return idx in selected
+
+    owner   = (4 if has(0) else 0) + (2 if has(1) else 0) + (1 if has(2) else 0)
+    group   = (4 if has(3) else 0) + (2 if has(4) else 0) + (1 if has(5) else 0)
+    other   = (4 if has(6) else 0) + (2 if has(7) else 0) + (1 if has(8) else 0)
+    special = (4 if has(9) else 0) + (2 if has(10) else 0) + (1 if has(11) else 0)
+
+    sym = ""
+    for r_i, w_i, x_i in [(0, 1, 2), (3, 4, 5), (6, 7, 8)]:
+        sym += ("r" if has(r_i) else "-")
+        sym += ("w" if has(w_i) else "-")
+        sym += ("x" if has(x_i) else "-")
+
+    octal = f"{special}{owner}{group}{other}" if special else f"{owner}{group}{other}"
+
+    os.system("clear")
+    utils.print_menu_name("Permission matrix - confirm")
+    print()
+    print(f"  {utils.GRAY}{'Entity':<10}{'Permissions':<14}{'Value'}{utils.RESET}")
     print(f"  {utils.GRAY}{'─' * 32}{utils.RESET}")
-    for i, (digit, s) in enumerate(results):
-        print(f"  {utils.YELLOW}{labels[i]:<10}{utils.WHITE}{s:<14}{utils.GRAY}{digit}{utils.RESET}")
+    print(f"  {utils.YELLOW}{'Owner':<10}{utils.WHITE}{sym[0:3]:<14}{utils.GRAY}{owner}{utils.RESET}")
+    print(f"  {utils.YELLOW}{'Group':<10}{utils.WHITE}{sym[3:6]:<14}{utils.GRAY}{group}{utils.RESET}")
+    print(f"  {utils.YELLOW}{'Others':<10}{utils.WHITE}{sym[6:9]:<14}{utils.GRAY}{other}{utils.RESET}")
     if special:
-        spec_str = " ".join(filter(None, [
-            "setuid" if setuid else "",
-            "setgid" if setgid else "",
-            "sticky" if sticky else "",
-        ]))
-        print(f"  {utils.YELLOW}{'Special':<10}{utils.PURPLE}{spec_str:<14}{utils.GRAY}{special}{utils.RESET}")
+        spec_parts = []
+        if has(9):  spec_parts.append("setuid")
+        if has(10): spec_parts.append("setgid")
+        if has(11): spec_parts.append("sticky")
+        print(f"  {utils.YELLOW}{'Special':<10}{utils.PURPLE}{' '.join(spec_parts):<14}{utils.GRAY}{special}{utils.RESET}")
     print(f"\n  {utils.GREEN}Result: {octal}  ({sym}){utils.RESET}\n")
 
     if utils.choose(["yes", "no"], f"Apply {octal}?") != "yes":
@@ -174,39 +247,15 @@ def change_permissions():
     os.system("clear")
     utils.print_menu_name(f"Change permissions - {path}")
 
-    # show current permissions
-    result = subprocess.run(["stat", "-c", "%A %a", path], capture_output=True, text=True)
-    if result.returncode == 0:
-        symbolic, octal = result.stdout.strip().split()
-        print(f"  {utils.GRAY}Current: {utils.YELLOW}{symbolic}  ({octal}){utils.RESET}\n")
+    symbolic, cur_octal = _get_current_mode(path)
+    if cur_octal:
+        print(f"  {utils.GRAY}Current: {utils.YELLOW}{symbolic}  ({cur_octal}){utils.RESET}\n")
 
-    # preset menu with descriptions — no ANSI colors in labels
-    labels = [
-        f"{o:<8} {s:<12} {d}"
-        if o not in ("(manual)", "(wizard)") else
-        f"{'(wizard)' if o == '(wizard)' else '(manual entry)':<22} {d}"
-        for o, s, d in PRESETS
-    ]
-    choice = utils.choose(labels, "Select permission preset")
-    if choice is None:
+    mode = _bit_matrix(current_octal=cur_octal)
+    if mode is None:
         return
 
-    idx = labels.index(choice)
-    selected_octal, _, _ = PRESETS[idx]
-
-    if selected_octal == "(wizard)":
-        mode = permission_wizard()
-        if mode is None:
-            return
-    elif selected_octal == "(manual)":
-        print(f"\n  {utils.GRAY}Octal (e.g. 755) or symbolic (e.g. u+x, go-w){utils.RESET}")
-        mode = utils.ask_required("Mode")
-        if mode is None:
-            return
-    else:
-        mode = selected_octal
-
-    recursive = utils.choose(["yes", "no"], "Apply recursively?") == "yes"
+    recursive = _ask_recursive(path)
     cmd = ["sudo", "chmod"] + (["-R"] if recursive else []) + [mode, path]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
