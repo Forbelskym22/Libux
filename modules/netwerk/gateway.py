@@ -26,11 +26,18 @@ def add_gateway():
     utils.print_menu_name("Set default gateway")
     show_gateway(pause=False)
 
+    iface = utils.pick_interface("gateway device")
+    if iface is None:
+        return
+
     ip = utils.ask_ip("Gateway IP")
     if not ip:
         return
-    
-    result = subprocess.run(["sudo", "ip", "route", "replace", "default", "via", ip], capture_output=True, text=True)
+
+    result = subprocess.run(
+        ["sudo", "ip", "route", "replace", "default", "via", ip, "dev", iface],
+        capture_output=True, text=True
+    )
     if result.returncode != 0:
         utils.log(result.stderr.strip(), "error")
         utils.pause()
@@ -40,19 +47,22 @@ def add_gateway():
         with open(INTERFACES_FILE, "r") as f:
             content = f.read()
 
-        if re.search(r"^\s+gateway\s+\S+", content, re.MULTILINE):
-            new_content = re.sub(r"(\s+gateway\s+)\S+", rf"\g<1>{ip}", content)
+        iface_re = re.escape(iface)
+        block_re = rf"(iface {iface_re} inet static[^\n]*\n(?:[ \t]+[^\n]*\n)*)"
+        m = re.search(block_re, content)
+        if not m:
+            utils.log(f"No 'iface {iface} inet static' block in {INTERFACES_FILE}; route set at runtime only.", "info")
         else:
-            new_content = re.sub(
-                r"(iface \S+ inet static[^\n]*\n(?:[ \t]+(?!gateway)[^\n]*\n)*)",
-                rf"\1    gateway {ip}\n",
-                content
-            )
+            block = m.group(1)
+            if re.search(r"^[ \t]+gateway\s+\S+", block, re.MULTILINE):
+                new_block = re.sub(r"(^[ \t]+gateway\s+)\S+", rf"\g<1>{ip}", block, flags=re.MULTILINE)
+            else:
+                new_block = block.rstrip("\n") + f"\n    gateway {ip}\n"
+            new_content = content.replace(block, new_block, 1)
+            with open(INTERFACES_FILE, "w") as f:
+                f.write(new_content)
 
-        with open(INTERFACES_FILE, "w") as f:
-            f.write(new_content)
-
-        utils.log(f"Gateway {ip} set.", "success")
+        utils.log(f"Gateway {ip} set via {iface}.", "success")
 
     except Exception as e:
         utils.log(f"Failed to write {INTERFACES_FILE}: {e}", "error")
