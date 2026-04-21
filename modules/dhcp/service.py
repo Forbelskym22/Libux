@@ -5,8 +5,7 @@ from .shared import DHCP_SERVICE, DHCP_CONFIG, DHCP_DEFAULTS, DEFAULT_CONFIG
 
 
 def is_installed():
-    result = subprocess.run(["dpkg", "-l", "isc-dhcp-server"], capture_output=True)
-    return result.returncode == 0
+    return utils.is_pkg_installed("isc-dhcp-server")
 
 
 def has_subnet():

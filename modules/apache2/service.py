@@ -4,8 +4,7 @@ from modules import utils
 from .shared import APACHE_SERVICE, APACHE_CONF
 
 def is_installed():
-    result = subprocess.run(["dpkg", "-l", "apache2"], capture_output=True)
-    return result.returncode == 0 and utils.is_binary_installed("apache2ctl")
+    return utils.is_pkg_installed("apache2") and utils.is_binary_installed("apache2ctl")
 
 def install_apache():
     os.system("clear")

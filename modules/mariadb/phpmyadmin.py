@@ -5,13 +5,11 @@ from .shared import PHPMYADMIN_PACKAGE
 
 
 def is_installed():
-    result = subprocess.run(["dpkg", "-l", PHPMYADMIN_PACKAGE], capture_output=True)
-    return result.returncode == 0
+    return utils.is_pkg_installed(PHPMYADMIN_PACKAGE)
 
 
 def _apache_installed():
-    result = subprocess.run(["dpkg", "-l", "apache2"], capture_output=True)
-    return result.returncode == 0
+    return utils.is_pkg_installed("apache2")
 
 
 def install_phpmyadmin():

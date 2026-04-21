@@ -6,8 +6,7 @@ from .shared import MARIADB_SERVICE, MARIADB_PACKAGE
 
 
 def is_installed():
-    result = subprocess.run(["dpkg", "-l", MARIADB_PACKAGE], capture_output=True)
-    return result.returncode == 0 and utils.is_binary_installed("mariadb")
+    return utils.is_pkg_installed(MARIADB_PACKAGE) and utils.is_binary_installed("mariadb")
 
 
 def _service_running():
@@ -100,23 +99,50 @@ def set_root_password():
 
     # escape backslash first, then single quote
     pw_esc = pw1.replace("\\", "\\\\").replace("'", "\\'")
-    sql = (
+
+    # MariaDB 10.4+ supports multi-plugin auth:
+    #   ALTER USER ... IDENTIFIED VIA unix_socket OR mysql_native_password ...
+    # Older versions (Debian 10 ships 10.3) need the classic SET PASSWORD path.
+    sql_modern = (
         "ALTER USER 'root'@'localhost' "
         "IDENTIFIED VIA unix_socket "
         f"OR mysql_native_password USING PASSWORD('{pw_esc}');\n"
         "FLUSH PRIVILEGES;\n"
     )
+    sql_legacy = (
+        f"SET PASSWORD FOR 'root'@'localhost' = PASSWORD('{pw_esc}');\n"
+        "FLUSH PRIVILEGES;\n"
+    )
 
     result = subprocess.run(
         ["sudo", "mariadb"],
-        input=sql, text=True, capture_output=True
+        input=sql_modern, text=True, capture_output=True
     )
     if result.returncode == 0:
         utils.log("Root password set (unix_socket auth preserved).", "success")
-    else:
-        utils.log("Failed to set root password.", "error")
-        if result.stderr.strip():
-            print(f"\n{utils.GRAY}{result.stderr.strip()}{utils.RESET}\n")
+        utils.pause()
+        return
+
+    err = (result.stderr or "").lower()
+    # Syntax error on the multi-plugin form → fall back to the legacy path.
+    if "syntax" in err or "error 1064" in err or "you have an error" in err:
+        utils.log("Older MariaDB detected; using legacy password syntax.", "info")
+        result = subprocess.run(
+            ["sudo", "mariadb"],
+            input=sql_legacy, text=True, capture_output=True
+        )
+        if result.returncode == 0:
+            utils.log("Root password set.", "success")
+            utils.log(
+                "Note: on this MariaDB version 'sudo mariadb' may now "
+                "ask for a password. Use `mariadb -u root -p`.", "info"
+            )
+            utils.pause()
+            return
+
+    utils.log("Failed to set root password.", "error")
+    if result.stderr.strip():
+        print(f"\n{utils.GRAY}{result.stderr.strip()}{utils.RESET}\n")
     utils.pause()
 
 

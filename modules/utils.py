@@ -140,6 +140,16 @@ def is_binary_installed(service_name):
     """
     return shutil.which(service_name) is not None
 
+
+def is_pkg_installed(pkg):
+    """True only when the apt package is fully installed (not 'rc' / config-only).
+    Uses dpkg-query so packages left behind by `apt remove` don't count."""
+    result = subprocess.run(
+        ["dpkg-query", "-W", "-f=${Status}", pkg],
+        capture_output=True, text=True
+    )
+    return result.returncode == 0 and "install ok installed" in result.stdout
+
 def log(message,msg_type="info"):
     """
     Writes out a message to the Teminal

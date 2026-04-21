@@ -1,1 +1,1 @@
-simple-term-menu
+simple-term-menu>=1.6,<2
