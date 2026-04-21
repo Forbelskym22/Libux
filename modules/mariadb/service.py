@@ -31,13 +31,18 @@ def install_mariadb():
 
     subprocess.run(["sudo", "apt", "install", MARIADB_PACKAGE, "-y"])
 
-    if is_installed():
-        utils.log("mariadb-server installed.", "success")
-        utils.log("Tip: run `sudo mysql_secure_installation` in shell to set root password.", "info")
-    else:
+    if not is_installed():
         utils.log("Installation failed.", "error")
+        utils.pause()
+        return
 
-    utils.pause()
+    utils.log("mariadb-server installed.", "success")
+    print()
+    if utils.choose(["Yes, set it now", "Skip"], "Set root password now?") == "Yes, set it now":
+        set_root_password()
+    else:
+        utils.log("You can set it later via MariaDB menu -> Set root password.", "info")
+        utils.pause()
 
 
 def show_status():
