@@ -69,6 +69,13 @@ def set_user_quota():
         utils.pause()
         return
 
+    aquota = os.path.join(fs["mountpoint"], "aquota.user")
+    if not os.path.exists(aquota):
+        utils.log(f"Quota file {aquota} is missing — quotacheck hasn't run successfully.", "error")
+        utils.log(f"Run 'Enable quotas' again; root filesystem may need a reboot first.", "info")
+        utils.pause()
+        return
+
     username = utils.ask_required("Username")
     if username is None:
         return
@@ -119,10 +126,24 @@ def enable_quotas():
     subprocess.run(["sudo", "bash", "-c", f"cat > {FSTAB}"],
                    input=new_content, text=True, capture_output=True)
 
-    subprocess.run(["sudo", "mount", "-o", "remount", fs["mountpoint"]], capture_output=True)
-    subprocess.run(["sudo", "quotacheck", "-cum", fs["mountpoint"]], capture_output=True)
-    result = subprocess.run(["sudo", "quotaon", fs["mountpoint"]], capture_output=True, text=True)
+    remount = subprocess.run(["sudo", "mount", "-o", "remount", fs["mountpoint"]],
+                             capture_output=True, text=True)
+    if remount.returncode != 0:
+        utils.log(f"Remount failed: {remount.stderr.strip()}", "error")
+        utils.log(f"The '{fs['mountpoint']}' filesystem may need a reboot for usrquota to take effect.", "info")
+        utils.pause()
+        return
 
+    qcheck = subprocess.run(["sudo", "quotacheck", "-cum", fs["mountpoint"]],
+                            capture_output=True, text=True)
+    if qcheck.returncode != 0:
+        utils.log(f"quotacheck failed: {qcheck.stderr.strip() or qcheck.stdout.strip()}", "error")
+        if fs["mountpoint"] == "/":
+            utils.log("Root filesystem usually needs a reboot (or single-user mode) before quotacheck can create aquota.user.", "info")
+        utils.pause()
+        return
+
+    result = subprocess.run(["sudo", "quotaon", fs["mountpoint"]], capture_output=True, text=True)
     if result.returncode != 0:
         utils.log(result.stderr.strip() or "Failed to enable quotas.", "error")
     else:
