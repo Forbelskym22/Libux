@@ -71,8 +71,14 @@ def set_user_quota():
 
     aquota = os.path.join(fs["mountpoint"], "aquota.user")
     if not os.path.exists(aquota):
-        utils.log(f"Quota file {aquota} is missing — quotacheck hasn't run successfully.", "error")
-        utils.log(f"Run 'Enable quotas' again; root filesystem may need a reboot first.", "info")
+        utils.log(f"Quota setup on {fs['mountpoint']} is not finished yet ({aquota} is missing).", "error")
+        if fs["mountpoint"] == "/":
+            utils.log("Root filesystem needs a reboot to activate quotas. Steps:", "info")
+            utils.log("  1. Go back to 'Enable quotas' and confirm reboot", "info")
+            utils.log("  2. After reboot, open 'Enable quotas' once more to finish setup", "info")
+            utils.log("  3. Then come back here to set per-user limits", "info")
+        else:
+            utils.log("Go to 'Enable quotas' and run it for this filesystem.", "info")
         utils.pause()
         return
 
@@ -149,12 +155,17 @@ def enable_quotas():
                              capture_output=True, text=True)
     remount_ok = remount.returncode == 0
 
+    qcheck = None
+    qcheck_ok = False
     if remount_ok:
         qcheck = subprocess.run(["sudo", "quotacheck", "-cum", fs["mountpoint"]],
                                 capture_output=True, text=True)
         qcheck_ok = qcheck.returncode == 0
-    else:
-        qcheck_ok = False
+        if not qcheck_ok:
+            # Fallback: force check on mounted FS (works on rootfs without reboot in many cases)
+            qcheck = subprocess.run(["sudo", "quotacheck", "-cuMf", fs["mountpoint"]],
+                                    capture_output=True, text=True)
+            qcheck_ok = qcheck.returncode == 0
 
     if not remount_ok or not qcheck_ok:
         reason = remount.stderr.strip() if not remount_ok else (qcheck.stderr.strip() or qcheck.stdout.strip())
