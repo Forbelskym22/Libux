@@ -76,7 +76,7 @@ def add_user():
         return
 
     create_home = utils.choose(["yes", "no"], "Create home directory?") == "yes"
-    cmd = ["sudo", "useradd", "-m" if create_home else "-M", username]
+    cmd = ["sudo", "useradd", "-m" if create_home else "-M", "-s", "/bin/bash", username]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         utils.log(result.stderr.strip() or "Failed to create user.", "error")
