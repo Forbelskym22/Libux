@@ -45,7 +45,7 @@ def main():
 
     while True:
         os.system('clear')
-        utils.print_menu_name("Libux v0.9.0")
+        utils.print_menu_name("Libux v1.0.0")
         terminal_menu = utils.create_menu(options, last)
         idx = utils.show_menu(terminal_menu)
 
