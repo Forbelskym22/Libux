@@ -43,16 +43,106 @@ def pick_filesystem(prompt="Select filesystem"):
 
 # ── Show usage ─────────────────────────────────────────────────────────────────
 
+def _fmt_kb(kb):
+    try:
+        n = int(kb)
+    except (TypeError, ValueError):
+        return str(kb)
+    if n == 0:
+        return "-"
+    for unit, div in (("G", 1024 * 1024), ("M", 1024), ("K", 1)):
+        if n >= div:
+            val = n / div
+            return f"{val:.1f}{unit}" if val < 10 else f"{val:.0f}{unit}"
+    return f"{n}K"
+
+
+def _usage_color(used_kb, soft_kb, hard_kb):
+    try:
+        used = int(used_kb); soft = int(soft_kb); hard = int(hard_kb)
+    except (TypeError, ValueError):
+        return utils.WHITE
+    if hard and used >= hard:
+        return utils.RED
+    if soft and used >= soft:
+        return utils.YELLOW
+    return utils.GREEN
+
+
+def _render_quota_block(header, rows):
+    # rows: list of [user, flags, used, soft, hard, files_used, files_soft, files_hard]
+    print(f"{utils.PINK}{header}{utils.RESET}")
+    print()
+    cols = ["User", "Flags", "Used", "Soft", "Hard", "Files", "F.soft", "F.hard"]
+    display = []
+    for r in rows:
+        user, flags, used, soft, hard, fused, fsoft, fhard = r
+        color = _usage_color(used, soft, hard)
+        display.append([
+            (utils.WHITE, user),
+            (utils.GRAY, flags),
+            (color, _fmt_kb(used)),
+            (utils.GRAY, _fmt_kb(soft)),
+            (utils.GRAY, _fmt_kb(hard)),
+            (utils.WHITE, fused if fused != "0" else "-"),
+            (utils.GRAY, fsoft if fsoft != "0" else "-"),
+            (utils.GRAY, fhard if fhard != "0" else "-"),
+        ])
+
+    widths = [len(c) for c in cols]
+    for row in display:
+        for i, (_, txt) in enumerate(row):
+            widths[i] = max(widths[i], len(txt))
+
+    header_line = "  ".join(f"{utils.WHITE}{c:<{widths[i]}}{utils.RESET}"
+                            for i, c in enumerate(cols))
+    print(header_line)
+    print(f"{utils.GRAY}" + "-" * (sum(widths) + 2 * (len(widths) - 1)) + f"{utils.RESET}")
+    for row in display:
+        parts = []
+        for i, (color, txt) in enumerate(row):
+            parts.append(f"{color}{txt:<{widths[i]}}{utils.RESET}")
+        print("  ".join(parts))
+    print()
+
+
 def show_quota_usage():
     os.system("clear")
     utils.print_menu_name("Quota usage")
-    result = subprocess.run(["sudo", "repquota", "-a"], capture_output=True, text=True)
-    if result.returncode != 0:
+
+    quota_fs = [fs for fs in get_filesystems() if quota_enabled(fs)]
+    if not quota_fs:
         utils.log("No quotas are enabled on any filesystem.", "error")
         if utils.choose(["yes", "no"], "Enable quotas now?") == "yes":
             enable_quotas()
         return
-    print(result.stdout or "No quota data.")
+
+    any_data = False
+    for fs in quota_fs:
+        result = subprocess.run(["sudo", "repquota", fs["mountpoint"]],
+                                capture_output=True, text=True)
+        if result.returncode != 0:
+            utils.log(f"repquota failed on {fs['mountpoint']}: {result.stderr.strip()}", "error")
+            continue
+
+        rows = []
+        for line in result.stdout.splitlines():
+            parts = line.split()
+            # valid rows: user, flags (--/+-/...), then 6 numeric fields
+            if len(parts) < 8:
+                continue
+            if not parts[2].isdigit():
+                continue
+            rows.append(parts[:8])
+
+        header = f"── {fs['mountpoint']}  ({fs['device']}, {fs['fstype']}) "
+        header = header + "─" * max(0, 60 - len(header))
+        _render_quota_block(header, rows)
+        if rows:
+            any_data = True
+
+    if not any_data:
+        print(f"{utils.GRAY}No user quota entries yet. Set one via 'Set user quota'.{utils.RESET}\n")
     utils.pause()
 
 # ── Set user quota ─────────────────────────────────────────────────────────────
