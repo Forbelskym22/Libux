@@ -17,19 +17,22 @@ def show_network_menu():
         utils.print_menu_name("Network Connectivity")
 
         options = [
-            "Interfaces",       # 0
-            "DNS",              # 1
-            "Gateway",          # 2   
-            "Hostname",         # 3      
-            "VLAN",             # 4   
-            "",                 # 5
-            "Ping test",        # 6       
-            "",                 # 7
-            "Back",             # 8  
-        ]#
+            "Interfaces",               # 0
+            "DNS",                      # 1
+            "Gateway",                  # 2
+            "Hostname",                 # 3
+            "VLAN",                     # 4
+            "",                         # 5
+            "Ping test",                # 6
+            "",                         # 7
+            "Edit /etc/network/interfaces", # 8
+            "Restart networking",       # 9
+            "",                         # 10
+            "Back",                     # 11
+        ]
 
         menu = utils.create_menu(options,last)
-        choice = utils.show_menu(menu)  
+        choice = utils.show_menu(menu)
 
         if choice == 0:
             manage_interfaces()
@@ -55,10 +58,41 @@ def show_network_menu():
                     pass
                 utils.log("Ping finished.", "success")
                 utils.pause()
-
-        elif choice == 8 or choice is None:
+        elif choice == 8:
+            _edit_interfaces_file()
+        elif choice == 9:
+            _restart_networking()
+        elif choice == 11 or choice is None:
             return
         last = choice
+
+
+def _edit_interfaces_file():
+    if not utils.is_binary_installed("nano"):
+        utils.log("nano is not installed.", "error")
+        if utils.choose(["yes", "no"], "Install nano?") != "yes":
+            return
+        subprocess.run(["sudo", "apt", "install", "nano", "-y"])
+        if not utils.is_binary_installed("nano"):
+            utils.log("Installation failed.", "error")
+            utils.pause()
+            return
+    subprocess.run(["sudo", "nano", "/etc/network/interfaces"])
+    if utils.choose(["yes", "no"], "Restart networking to apply changes?") == "yes":
+        _restart_networking()
+
+
+def _restart_networking():
+    os.system("clear")
+    utils.print_menu_name("Restart networking")
+    utils.log("Restarting networking.service...", "info")
+    result = subprocess.run(["sudo", "systemctl", "restart", "networking"],
+                            capture_output=True, text=True)
+    if result.returncode != 0:
+        utils.log(result.stderr.strip() or "Failed to restart networking.", "error")
+    else:
+        utils.log("networking.service restarted.", "success")
+    utils.pause()
 
 def run():
     show_network_menu()
