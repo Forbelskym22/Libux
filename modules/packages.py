@@ -12,6 +12,7 @@ PACKAGES = [
     ("phpmyadmin",          "phpMyAdmin",          "Web UI for MariaDB (needs Apache2)"),
     ("isc-dhcp-server",     "ISC DHCP server",     "DHCP server"),
     ("iptables-persistent", "iptables-persistent", "Persists firewall rules across reboots"),
+    ("quota",               "quota",               "Disk quota tools (quotaon, repquota, setquota)"),
 ]
 
 

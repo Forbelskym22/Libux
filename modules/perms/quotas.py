@@ -153,7 +153,26 @@ def disable_quotas():
 
 # ── Quotas menu ────────────────────────────────────────────────────────────────
 
+def _ensure_quota_installed():
+    if utils.is_pkg_installed("quota"):
+        return True
+    utils.log("The 'quota' package is not installed (needed for quotaon, repquota, setquota).", "error")
+    if utils.choose(["yes", "no"], "Install it now?") != "yes":
+        utils.pause()
+        return False
+    subprocess.run(["sudo", "apt", "update"], capture_output=True, text=True)
+    subprocess.run(["sudo", "apt", "install", "-y", "quota"])
+    if not utils.is_pkg_installed("quota"):
+        utils.log("Installation failed.", "error")
+        utils.pause()
+        return False
+    utils.log("quota installed.", "success")
+    return True
+
+
 def quotas_menu():
+    if not _ensure_quota_installed():
+        return
     last = 0
     while True:
         os.system("clear")

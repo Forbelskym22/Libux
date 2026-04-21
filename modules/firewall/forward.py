@@ -3,6 +3,7 @@ import subprocess
 import os
 from modules import utils
 from .shared import remove_rule, show_chain, rule_exists, flush_chain, toggle_policy, allow_icmp
+from modules.routing.forwarding import prompt_enable_forwarding
 
 
 def forward_allow_traffic():
@@ -57,7 +58,8 @@ def forward_allow_traffic():
     else:
         subprocess.run(cmd)
         utils.log("Forward rule added.", "success")
-    
+        prompt_enable_forwarding()
+
 
 
 def forward_allow_es_rel():
@@ -87,6 +89,7 @@ def forward_allow_es_rel():
     else:
         subprocess.run(cmd)
         utils.log("Established/related traffic allowed on FORWARD.", "success")
+        prompt_enable_forwarding()
 
 
 

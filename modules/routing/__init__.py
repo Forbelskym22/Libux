@@ -10,7 +10,7 @@ def show_routing_menu():
         utils.print_menu_name("Routing")
 
         fwd = forwarding_enabled()
-        fwd_label = "Disable IP forwarding" if fwd else "Enable IP forwarding"
+        fwd_label = "Disable Routing" if fwd else "Enable Routing"
         fwd_status = f"[on]" if fwd else f"[off]"
 
         options = [
