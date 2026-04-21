@@ -149,12 +149,12 @@ def save_rules():
         f.write(result.stdout)
     utils.log(f"Rules saved to {RULES_FILE}.", "success")
 
-    if not utils.is_binary_installed("iptables-restore"):
+    if not utils.is_binary_installed("netfilter-persistent"):
         install = utils.choose(["yes", "no"], "iptables-persistent not found. Install it?")
         if install == "yes":
             subprocess.run(["sudo", "apt-get", "install", "-y", "iptables-persistent"])
-    
-    if utils.is_binary_installed("iptables-restore"):
+
+    if utils.is_binary_installed("netfilter-persistent"):
         utils.run_cmd(["sudo", "netfilter-persistent", "save"])
         utils.log("Rules will persist across reboots.", "success")
     
