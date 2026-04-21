@@ -130,8 +130,8 @@ def add_route():
         utils.log("Not a valid IP address. Try again or press Ctrl+C to cancel.", "error")
 
     # ── Interface ──────────────────────────────────────────────────────────────
-    print(f"\n  {utils.GRAY}Interface — network interface to send traffic through (optional){utils.RESET}")
-    iface = utils.ask("Interface")
+    print(f"\n  {utils.GRAY}Interface — network interface to send traffic through{utils.RESET}")
+    iface = utils.pick_interface("route egress")
     if iface is None:
         return
 
@@ -158,22 +158,39 @@ def add_route():
     utils.pause()
 
 def _persist_route_add(network, gw, iface):
+    """Insert 'up ip route add ...' inside the iface's static block.
+    Lines outside an iface block are not executed during ifup, so we require a
+    target interface and scope the insertion to its block.
+    """
     try:
+        if not iface:
+            utils.log("Cannot persist a route without an interface — it would be ignored by ifup.", "error")
+            return
+
         result = subprocess.run(["sudo", "cat", INTERFACES_FILE], capture_output=True, text=True)
         content = result.stdout
-        route_line = f"    up ip route add {network} via {gw}"
-        if iface:
-            route_line += f" dev {iface}"
+
+        route_line = f"    up ip route add {network} via {gw} dev {iface}"
         if route_line.strip() in content:
             utils.log("Route already in /etc/network/interfaces.", "info")
             return
-        # append after last iface block or at end
-        new_content = content.rstrip() + f"\n{route_line}\n"
+
+        iface_re = re.escape(iface)
+        block_re = rf"(iface {iface_re} inet static[^\n]*\n(?:[ \t]+[^\n]*\n)*)"
+        m = re.search(block_re, content)
+        if not m:
+            utils.log(f"No 'iface {iface} inet static' block in {INTERFACES_FILE}; can't persist.", "error")
+            return
+
+        block = m.group(1)
+        new_block = block.rstrip("\n") + f"\n{route_line}\n"
+        new_content = content.replace(block, new_block, 1)
+
         subprocess.run(
             ["sudo", "bash", "-c", f"cat > {INTERFACES_FILE}"],
             input=new_content, text=True, capture_output=True
         )
-        utils.log("Route saved to /etc/network/interfaces.", "success")
+        utils.log(f"Route saved under iface {iface} in /etc/network/interfaces.", "success")
     except Exception as e:
         utils.log(f"Failed to persist route: {e}", "error")
 
