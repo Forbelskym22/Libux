@@ -159,8 +159,14 @@ def enable_quotas():
     if not remount_ok or not qcheck_ok:
         reason = remount.stderr.strip() if not remount_ok else (qcheck.stderr.strip() or qcheck.stdout.strip())
         utils.log(f"Live activation failed: {reason}", "error")
-        utils.log(f"fstab has been updated — a reboot will let the kernel mount {fs['mountpoint']} with usrquota.", "info")
-        utils.log("After reboot, run 'Enable quotas' again to finish (quotacheck + quotaon).", "info")
+        # Enable the boot-time service so quotacheck + quotaon run automatically on next boot.
+        for svc in ("quotaon.service", "quota.service"):
+            enabled = subprocess.run(["sudo", "systemctl", "enable", svc],
+                                     capture_output=True, text=True)
+            if enabled.returncode == 0:
+                utils.log(f"Enabled {svc} — it will run quotacheck + quotaon at next boot.", "success")
+                break
+        utils.log(f"fstab has been updated. After reboot, quotas will be active on {fs['mountpoint']}.", "info")
         if utils.choose(["yes", "no"], "Reboot now?") == "yes":
             subprocess.run(["sudo", "reboot"])
         utils.pause()
