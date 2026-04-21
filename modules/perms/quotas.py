@@ -109,8 +109,27 @@ def enable_quotas():
     fs = pick_filesystem("Select filesystem")
     if fs is None:
         return
-    if quota_enabled(fs):
+
+    aquota = os.path.join(fs["mountpoint"], "aquota.user")
+    if quota_enabled(fs) and os.path.exists(aquota):
         utils.log(f"Quotas already enabled on {fs['mountpoint']}.", "info")
+        utils.pause()
+        return
+
+    # Post-reboot finish: usrquota already in mount opts but aquota.user missing
+    if quota_enabled(fs) and not os.path.exists(aquota):
+        utils.log(f"Filesystem mounted with usrquota; finishing setup...", "info")
+        qcheck = subprocess.run(["sudo", "quotacheck", "-cum", fs["mountpoint"]],
+                                capture_output=True, text=True)
+        if qcheck.returncode != 0:
+            utils.log(f"quotacheck failed: {qcheck.stderr.strip() or qcheck.stdout.strip()}", "error")
+            utils.pause()
+            return
+        result = subprocess.run(["sudo", "quotaon", fs["mountpoint"]], capture_output=True, text=True)
+        if result.returncode != 0:
+            utils.log(result.stderr.strip() or "Failed to enable quotas.", "error")
+        else:
+            utils.log(f"Quotas enabled on {fs['mountpoint']}.", "success")
         utils.pause()
         return
 
@@ -128,18 +147,22 @@ def enable_quotas():
 
     remount = subprocess.run(["sudo", "mount", "-o", "remount", fs["mountpoint"]],
                              capture_output=True, text=True)
-    if remount.returncode != 0:
-        utils.log(f"Remount failed: {remount.stderr.strip()}", "error")
-        utils.log(f"The '{fs['mountpoint']}' filesystem may need a reboot for usrquota to take effect.", "info")
-        utils.pause()
-        return
+    remount_ok = remount.returncode == 0
 
-    qcheck = subprocess.run(["sudo", "quotacheck", "-cum", fs["mountpoint"]],
-                            capture_output=True, text=True)
-    if qcheck.returncode != 0:
-        utils.log(f"quotacheck failed: {qcheck.stderr.strip() or qcheck.stdout.strip()}", "error")
-        if fs["mountpoint"] == "/":
-            utils.log("Root filesystem usually needs a reboot (or single-user mode) before quotacheck can create aquota.user.", "info")
+    if remount_ok:
+        qcheck = subprocess.run(["sudo", "quotacheck", "-cum", fs["mountpoint"]],
+                                capture_output=True, text=True)
+        qcheck_ok = qcheck.returncode == 0
+    else:
+        qcheck_ok = False
+
+    if not remount_ok or not qcheck_ok:
+        reason = remount.stderr.strip() if not remount_ok else (qcheck.stderr.strip() or qcheck.stdout.strip())
+        utils.log(f"Live activation failed: {reason}", "error")
+        utils.log(f"fstab has been updated — a reboot will let the kernel mount {fs['mountpoint']} with usrquota.", "info")
+        utils.log("After reboot, run 'Enable quotas' again to finish (quotacheck + quotaon).", "info")
+        if utils.choose(["yes", "no"], "Reboot now?") == "yes":
+            subprocess.run(["sudo", "reboot"])
         utils.pause()
         return
 
