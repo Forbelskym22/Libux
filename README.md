@@ -11,7 +11,7 @@ A text-based interface application designed for basic configuration of a Linux s
 - [x] Users and groups
 - [x] Disk quotas
 - [x] Permissions
-- [ ] MariaDB
+- [x] MariaDB
 
 > Implemented in v0.1.0: Firewall (iptables)  
 > Implemented in v0.2.0: Network connectivity  
@@ -21,7 +21,7 @@ A text-based interface application designed for basic configuration of a Linux s
 > Implemented in v0.6.0: Routing  
 > Implemented in v0.7.0: Users and groups  
 > Implemented in v0.8.0: Disk quotas & Permissions  
-> Planned for future releases: MariaDB
+> Implemented in v0.9.0: MariaDB (install + phpMyAdmin)  
 
 
 ## Requirements

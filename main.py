@@ -8,6 +8,7 @@ from modules import netwerk
 from modules import dhcp
 from modules import ssh
 from modules import apache2
+from modules import mariadb
 from modules import routing
 from modules import users
 from modules import perms
@@ -22,19 +23,20 @@ def main():
         "DHCP",                # 2
         "SSH",                 # 3
         "Apache2",             # 4
-        "Routing",             # 5
-        "Users & Groups",      # 6
-        "Quotas",              # 7
-        "Permissions",         # 8
-        "",                    # 9
-        "Settings",            # 10
-        "",                    # 11
-        "Exit Libux"           # 12
+        "MariaDB",             # 5
+        "Routing",             # 6
+        "Users & Groups",      # 7
+        "Quotas",              # 8
+        "Permissions",         # 9
+        "",                    # 10
+        "Settings",            # 11
+        "",                    # 12
+        "Exit Libux"           # 13
         ]
     last = 0
     while True:
         os.system('clear')
-        utils.print_menu_name("Libux v0.8.0")
+        utils.print_menu_name("Libux v0.9.0")
         terminal_menu = utils.create_menu(options,last)
 
         menu_entry_index = utils.show_menu(terminal_menu)
@@ -50,16 +52,18 @@ def main():
         elif menu_entry_index == 4:
             apache2.run()
         elif menu_entry_index == 5:
-            routing.run()
+            mariadb.run()
         elif menu_entry_index == 6:
-            users.run()
+            routing.run()
         elif menu_entry_index == 7:
-            perms.quotas_menu()
+            users.run()
         elif menu_entry_index == 8:
+            perms.quotas_menu()
+        elif menu_entry_index == 9:
             perms.permissions_menu()
-        elif menu_entry_index == 10:
+        elif menu_entry_index == 11:
             settings.manage_settings()
-        elif menu_entry_index == 12 or menu_entry_index is None:
+        elif menu_entry_index == 13 or menu_entry_index is None:
             utils.log("Exiting Libux...", "info")
             sys.exit(0)
  
