@@ -5,7 +5,6 @@ from modules import utils
 from .interfaces import manage_interfaces
 from .dns import manage_dns
 from .gateway import manage_gateway
-from .hostname import manage_hostname
 from .vlan import manage_vlan
 from .service import manage_service, restart_service
 
@@ -21,15 +20,14 @@ def show_network_menu():
             "Interfaces",                   # 0
             "DNS",                          # 1
             "Gateway",                      # 2
-            "Hostname",                     # 3
-            "VLAN",                         # 4
-            "",                             # 5
-            "Ping test",                    # 6
-            "Edit /etc/network/interfaces", # 7
-            "",                             # 8
-            "Service",                      # 9
-            "",                             # 10
-            "Back",                         # 11
+            "VLAN",                         # 3
+            "",                             # 4
+            "Ping test",                    # 5
+            "Edit /etc/network/interfaces", # 6
+            "",                             # 7
+            "Service",                      # 8
+            "",                             # 9
+            "Back",                         # 10
         ]
 
         menu = utils.create_menu(options,last)
@@ -42,10 +40,8 @@ def show_network_menu():
         elif choice == 2:
             manage_gateway()
         elif choice == 3:
-            manage_hostname()
-        elif choice == 4:
             manage_vlan()
-        elif choice == 6:
+        elif choice == 5:
             os.system("clear")
             utils.print_menu_name("Ping test")
             target = utils.ask_required("Target IP or hostname")
@@ -59,11 +55,11 @@ def show_network_menu():
                     pass
                 utils.log("Ping finished.", "success")
                 utils.pause()
-        elif choice == 7:
+        elif choice == 6:
             _edit_interfaces_file()
-        elif choice == 9:
+        elif choice == 8:
             manage_service()
-        elif choice == 11 or choice is None:
+        elif choice == 10 or choice is None:
             return
         last = choice
 
