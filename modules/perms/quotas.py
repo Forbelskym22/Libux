@@ -234,21 +234,22 @@ def quotas_menu():
         utils.print_menu_name("Disk Quotas")
         options = [
             "Show quota usage",  # 0
-            "Set user quota",    # 1
+            "",                  # 1
             "Enable quotas",     # 2
-            "Disable quotas",    # 3
-            "",                  # 4
-            "Back",              # 5
+            "Set user quota",    # 3
+            "Disable quotas",    # 4
+            "",                  # 5
+            "Back",              # 6
         ]
         choice = utils.show_menu(utils.create_menu(options, last))
         if choice == 0:
             show_quota_usage()
-        elif choice == 1:
-            set_user_quota()
         elif choice == 2:
             enable_quotas()
         elif choice == 3:
+            set_user_quota()
+        elif choice == 4:
             disable_quotas()
-        elif choice == 5 or choice is None:
+        elif choice == 6 or choice is None:
             return
         last = choice
