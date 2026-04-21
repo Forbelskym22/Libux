@@ -1,6 +1,8 @@
 import os
 import re
+import shutil
 import subprocess
+import tempfile
 from modules import utils
 from .shared import SSH_SERVICE, SSHD_CONFIG
 
@@ -17,6 +19,38 @@ def get_config_value(key):
     except FileNotFoundError:
         pass
     return None
+
+
+def _atomic_write(path, data):
+    """Write `data` to `path` atomically (tmp in same dir + os.replace).
+    Preserves the original file's mode/owner where possible."""
+    dir_ = os.path.dirname(path) or "."
+    fd, tmp = tempfile.mkstemp(prefix=".libux-", dir=dir_)
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(data)
+        try:
+            st = os.stat(path)
+            os.chmod(tmp, st.st_mode & 0o7777)
+            os.chown(tmp, st.st_uid, st.st_gid)
+        except FileNotFoundError:
+            pass
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def _sshd_valid(path):
+    """Run `sshd -t -f <path>` and return (ok, stderr)."""
+    result = subprocess.run(
+        ["sudo", "sshd", "-t", "-f", path],
+        capture_output=True, text=True
+    )
+    return result.returncode == 0, result.stderr.strip()
 
 
 def set_config_value(key, value):
@@ -36,13 +70,33 @@ def set_config_value(key, value):
         if not found:
             new_lines.append(f"\n{key} {value}\n")
 
-        with open(SSHD_CONFIG, "w") as f:
-            f.writelines(new_lines)
-
-        return True
+        return _write_and_validate("".join(new_lines))
     except Exception as e:
         utils.log(f"Failed to write config: {e}", "error")
         return False
+
+
+def _write_and_validate(new_content):
+    """Validate new sshd_config content with `sshd -t` on a tmp file,
+    then atomically replace SSHD_CONFIG. Returns True on success."""
+    dir_ = os.path.dirname(SSHD_CONFIG) or "."
+    fd, tmp = tempfile.mkstemp(prefix=".libux-sshd-", dir=dir_)
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(new_content)
+        ok, err = _sshd_valid(tmp)
+        if not ok:
+            utils.log("sshd rejected the new config (not applied).", "error")
+            if err:
+                print(f"\n{utils.GRAY}{err}{utils.RESET}\n")
+            return False
+        _atomic_write(SSHD_CONFIG, new_content)
+        return True
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
 
 
 DEFAULTS = {
@@ -53,6 +107,19 @@ DEFAULTS = {
     "AllowUsers": "all",
     "DenyUsers": "none",
 }
+
+
+def apply_config():
+    result = subprocess.run(
+        ["sudo", "systemctl", "restart", SSH_SERVICE],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        utils.log("SSH service restarted (change applied).", "success")
+    else:
+        utils.log("Failed to restart SSH service.", "error")
+        if result.stderr.strip():
+            print(f"\n{utils.GRAY}{result.stderr.strip()}{utils.RESET}\n")
 
 def show_config(pause=True):
     os.system("clear")
@@ -92,7 +159,8 @@ def set_port():
         utils.log("Invalid port number.", "error")
 
     if set_config_value("Port", port):
-        utils.log(f"Port set to {port}. Restart SSH to apply.", "success")
+        utils.log(f"Port set to {port}.", "success")
+        apply_config()
     utils.pause()
 
 
@@ -109,7 +177,8 @@ def set_root_login():
         else:
             break
     if set_config_value("PermitRootLogin", permitroot):
-        utils.log(f"Permit root login policy set to {permitroot}. Restart SSH to apply.", "success")
+        utils.log(f"Permit root login policy set to {permitroot}.", "success")
+        apply_config()
     utils.pause()
 
 def set_password_auth():
@@ -125,8 +194,9 @@ def set_password_auth():
         else:
             break
     if set_config_value("PasswordAuthentication", auth):
-        utils.log(f"Password authentication set to {auth}. Restart SSH to apply.", "success")
-    utils.pause() 
+        utils.log(f"Password authentication set to {auth}.", "success")
+        apply_config()
+    utils.pause()
 
 def set_max_auth_tries():
     os.system("clear")
@@ -143,7 +213,8 @@ def set_max_auth_tries():
         utils.log("Invalid number.", "error")
 
     if set_config_value("MaxAuthTries", number):
-        utils.log(f"MaxAuthTries set to {number}. Restart SSH to apply.", "success")
+        utils.log(f"MaxAuthTries set to {number}.", "success")
+        apply_config()
     utils.pause()
 
 
@@ -175,7 +246,8 @@ def _manage_user_list(key, title):
             else:
                 users.append(user)
                 set_config_value(key, " ".join(users))
-                utils.log(f"{user} added. Restart SSH to apply.", "success")
+                utils.log(f"{user} added.", "success")
+                apply_config()
             utils.pause()
 
         elif choice == 1:
@@ -187,19 +259,21 @@ def _manage_user_list(key, title):
             if user_choice is None:
                 continue
             users.remove(user_choice)
+            applied = False
             if users:
-                set_config_value(key, " ".join(users))
+                applied = set_config_value(key, " ".join(users))
             else:
                 # odstraň řádek úplně
                 try:
                     with open(SSHD_CONFIG, "r") as f:
                         lines = f.readlines()
                     new_lines = [l for l in lines if not re.match(rf"^{re.escape(key)}\s", l, re.IGNORECASE)]
-                    with open(SSHD_CONFIG, "w") as f:
-                        f.writelines(new_lines)
+                    applied = _write_and_validate("".join(new_lines))
                 except Exception as e:
                     utils.log(f"Failed to write config: {e}", "error")
-            utils.log(f"{user_choice} removed. Restart SSH to apply.", "success")
+            if applied:
+                utils.log(f"{user_choice} removed.", "success")
+                apply_config()
             utils.pause()
 
 

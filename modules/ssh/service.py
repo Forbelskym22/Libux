@@ -4,8 +4,7 @@ from modules import utils
 from .shared import SSH_SERVICE
 
 def is_installed():
-    result = subprocess.run(["dpkg", "-l", "openssh-server"], capture_output=True)
-    return result.returncode == 0
+    return utils.is_pkg_installed("openssh-server") and utils.is_binary_installed("sshd")
 
 def install_ssh():
     os.system("clear")
@@ -17,15 +16,28 @@ def install_ssh():
         utils.log("apt update failed", "error")
         utils.pause()
         return
-    
+
     result = subprocess.run(
         ["sudo", "apt", "install", "openssh-server", "-y"]
     )
 
-    if is_installed():
-        utils.log("openssh-server installed.", "success")
-    else:
+    if not is_installed():
         utils.log("Installation failed.", "error")
+        utils.pause()
+        return
+
+    utils.log("openssh-server installed.", "success")
+
+    enable = subprocess.run(
+        ["sudo", "systemctl", "enable", "--now", SSH_SERVICE],
+        capture_output=True, text=True
+    )
+    if enable.returncode == 0:
+        utils.log("SSH service enabled and started.", "success")
+    else:
+        utils.log("SSH installed but failed to enable/start service.", "error")
+        if enable.stderr.strip():
+            print(f"\n{utils.GRAY}{enable.stderr.strip()}{utils.RESET}\n")
 
     utils.pause()
 
