@@ -32,10 +32,10 @@ A text-based interface application designed for basic configuration of a Linux s
 - Root permissions
 
 ## Installation
-
-[Download binary](https://github.com/Forbelskym22/Libux/releases/tag/v1.0.0)
 ```
-sudo ./Libuxv1.0.0
+curl -LOJ https://libux.forbelsky.net
+chmod +x ./libux
+sudo ./libux
 ```
 
 > Root permissions are required.
