@@ -12,7 +12,7 @@ from modules import routing
 from modules import users
 from modules import perms
 from modules import packages
-
+from modules import pm2
 
 # (label, callback). Empty label = separator. Callback None = exit.
 MENU = [
@@ -26,6 +26,7 @@ MENU = [
     ("Users & Groups",      users.run),
     ("Quotas",              perms.quotas_menu),
     ("Permissions",         perms.permissions_menu),
+    ("pm2",                 pm2.run),
     ("",                    None),
     ("Packages",            packages.manage_packages),
     ("Settings",            settings.manage_settings),
