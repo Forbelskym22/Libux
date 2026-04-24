@@ -5,7 +5,7 @@ from modules import utils
 def is_pm2_installed():
     return utils.is_binary_installed("pm2")
 
-def is_node_installed():
+def is_nodejs_installed():
     return utils.is_binary_installed("nodejs")
 
 def get_apps():
@@ -25,4 +25,12 @@ def pick_app(title):
     if not apps:
         utils.log("No apps found in PM2", "info")
         utils.pause()
-        return
+        return None
+    return utils.choose(apps)
+
+def require_pm2():
+    if not is_pm2_installed():
+        utils.log("PM2 is not installed Install it first.", "error")
+        utils.pause()
+        return False
+    return True
