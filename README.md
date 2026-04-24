@@ -13,6 +13,7 @@ A text-based interface application designed for basic configuration of a Linux s
 - [x] Permissions
 - [x] MariaDB
 - [x] Package manager (install / remove supported services)
+- [x] PM2 process manager
 
 > Implemented in v0.1.0: Firewall (iptables)  
 > Implemented in v0.2.0: Network connectivity  
@@ -24,6 +25,7 @@ A text-based interface application designed for basic configuration of a Linux s
 > Implemented in v0.8.0: Disk quotas & Permissions  
 > Implemented in v0.9.0: MariaDB (install + phpMyAdmin)  
 > Implemented in v1.0.0: Package manager + hardening & bug fixes  
+> Implemented in v1.1.0: PM2 process manager  
 
 
 ## Requirements
